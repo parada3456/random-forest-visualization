@@ -450,7 +450,7 @@
             <button class="zoom-btn" id="btnZoomReset" type="button" title="Fit view to all data">⤢</button>
           </div>
         </div>
-        <p class="axis-caption"><b>x</b> = Feature₁ &nbsp;·&nbsp; <b>y</b> = Feature₂ — shaded regions show the current ensemble's decision boundary, recomputed after every tree. <span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Every pixel is run through all trees built so far; each tree casts one vote for a class, and the pixel is shaded with whichever class wins the most votes.</span></span></p>
+        <p class="axis-caption"><b>x</b> = Feature₁ &nbsp;·&nbsp; <b>y</b> = Feature₂ — shaded regions show the current ensemble's decision boundary, recomputed after every tree. The dashed outline is the <b>convex hull</b> of your training points; the darkened area outside it is <b>extrapolation</b> the forest was never trained on. <span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Every pixel is run through all trees built so far; each tree casts one vote for a class, and the pixel is shaded with whichever class wins the most votes. Outside the dashed hull, no bootstrap sample ever placed a point nearby — the forest's splits there are guesses, not evidence — so that region is dimmed ~40% as a trust cue.</span></span></p>
       </article>
 
       <article class="panel" id="panel-controls">
@@ -1067,6 +1067,59 @@
     redrawCanvas();
   }
 
+  // ---------- Convex hull (training-data coverage) ----------
+  // Andrew's monotone chain, O(n log n). Returns hull vertices in CCW order,
+  // or null if fewer than 3 non-collinear points are available.
+  function convexHull(pts){
+    if(pts.length < 3) return null;
+    const sorted = pts.slice().sort((a,b) => a.x - b.x || a.y - b.y);
+    const cross = (o,a,b) => (a.x-o.x)*(b.y-o.y) - (a.y-o.y)*(b.x-o.x);
+    const lower = [];
+    for(const p of sorted){
+      while(lower.length >= 2 && cross(lower[lower.length-2], lower[lower.length-1], p) <= 0) lower.pop();
+      lower.push(p);
+    }
+    const upper = [];
+    for(let i=sorted.length-1; i>=0; i--){
+      const p = sorted[i];
+      while(upper.length >= 2 && cross(upper[upper.length-2], upper[upper.length-1], p) <= 0) upper.pop();
+      upper.push(p);
+    }
+    upper.pop(); lower.pop();
+    const hull = lower.concat(upper);
+    return hull.length >= 3 ? hull : null;
+  }
+
+  // Dims whatever lies outside the training-data hull by ~40% opacity, since a
+  // forest's predictions out there are pure extrapolation — nothing in the
+  // bootstrap samples ever informed a split all the way out there.
+  function drawHullDim(c, W, H, toPixel, showOutline){
+    const hull = convexHull(state.data);
+    if(!hull) return;
+    const hp = hull.map(p => toPixel(p.x, p.y));
+    c.save();
+    c.beginPath();
+    c.rect(0, 0, W, H);
+    c.moveTo(hp[0].x, hp[0].y);
+    for(let i=1; i<hp.length; i++) c.lineTo(hp[i].x, hp[i].y);
+    c.closePath();
+    c.fillStyle = 'rgba(0,0,0,0.4)';
+    c.fill('evenodd');
+    c.restore();
+
+    if(showOutline){
+      c.beginPath();
+      c.moveTo(hp[0].x, hp[0].y);
+      for(let i=1; i<hp.length; i++) c.lineTo(hp[i].x, hp[i].y);
+      c.closePath();
+      c.strokeStyle = 'rgba(255,255,255,0.22)';
+      c.setLineDash([5,4]);
+      c.lineWidth = 1.2;
+      c.stroke();
+      c.setLineDash([]);
+    }
+  }
+
   function redrawCanvas(){
     const rect = canvas.getBoundingClientRect();
     const W = rect.width, H = rect.height;
@@ -1094,6 +1147,8 @@
       ctx.drawImage(boundaryCanvas, 0, 0, GRID_N, GRID_N, 0, 0, W, H);
       ctx.imageSmoothingEnabled = true;
     }
+
+    drawHullDim(ctx, W, H, (x,y) => dataToPixel(x, y, W, H), true);
 
     // points
     for(const p of state.data){
@@ -1418,6 +1473,10 @@
       }
     }
     c.globalAlpha = 1;
+    drawHullDim(c, W, H, (x,y) => ({
+      x: (x-b.minX)/(b.maxX-b.minX)*W,
+      y: (y-b.minY)/(b.maxY-b.minY)*H
+    }), !small);
     const r = small ? 1.6 : 3;
     for(const p of state.data){
       const px = (p.x-b.minX)/(b.maxX-b.minX)*W;
