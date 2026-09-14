@@ -1,0 +1,1636 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Random Forest Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    color-scheme: dark;
+    --bg: #0b0b09;
+    --bg-hero: radial-gradient(ellipse 900px 420px at 18% -10%, rgba(144,133,233,0.10), transparent 60%),
+                radial-gradient(ellipse 700px 380px at 100% 0%, rgba(217,155,63,0.06), transparent 55%);
+    --surface: #151511;
+    --surface-2: #1c1c17;
+    --surface-3: #22221b;
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.16);
+    --ink: #f1eee4;
+    --ink-dim: #c3c0b2;
+    --ink-muted: #8a8778;
+    --accent: #9085e9;
+    --accent-strong: #ab9ff4;
+    --accent-ink: #100e1e;
+    --accent-soft: rgba(144,133,233,0.14);
+    --gold: #d99b3f;
+    --series-a: #3987e5;
+    --series-b: #d95926;
+    --series-c: #199e70;
+    --grid-line: #2b2b24;
+    --good: #2fbf6f;
+    --warn: #e0a339;
+    --error: #e0524a;
+    --shadow: 0 18px 40px -18px rgba(0,0,0,0.65), 0 2px 10px -2px rgba(0,0,0,0.45);
+    --radius: 16px;
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background: var(--bg-hero), var(--bg);
+    color: var(--ink);
+    font-family: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+  }
+  h1,h2,h3{ font-family:"Fraunces", Georgia, serif; font-weight:600; margin:0; text-wrap:balance; }
+  p{ margin:0; }
+  code, .mono, .value, .stat-value, .axis-caption b{ font-family:"IBM Plex Mono", ui-monospace, monospace; }
+  ::selection{ background: var(--accent-soft); color: var(--ink); }
+
+  a{ color: var(--accent-strong); }
+
+  :focus-visible{ outline: 2px solid var(--accent-strong); outline-offset: 2px; border-radius: 4px; }
+
+  /* ---------- Header ---------- */
+  .site-header{
+    padding: 30px 34px 22px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    border-bottom: 1px solid var(--border);
+    flex: 0 0 auto;
+  }
+  .eyebrow{
+    font-size:11.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-strong);
+    font-weight:700;
+  }
+  .site-header h1{ font-size: clamp(24px, 3vw, 32px); letter-spacing: -0.01em; }
+  .lede{
+    color: var(--ink-dim);
+    font-size: 14.5px;
+    line-height:1.55;
+    max-width: 78ch;
+  }
+  .lede strong{ color: var(--ink); font-weight:700; }
+
+  /* ---------- Workspace ---------- */
+  .workspace{
+    flex: 1 1 auto;
+    min-height: 0;
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+    padding: 22px 34px;
+  }
+  .column{
+    min-height:0;
+    overflow-y: auto;
+    display:flex;
+    flex-direction:column;
+    gap: 22px;
+    padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+  .column::-webkit-scrollbar{ width:9px; }
+  .column::-webkit-scrollbar-track{ background:transparent; }
+  .column::-webkit-scrollbar-thumb{ background: var(--border-strong); border-radius: 8px; }
+
+  .panel{
+    background: linear-gradient(180deg, var(--surface-2), var(--surface));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 22px 22px;
+    flex: 0 0 auto;
+  }
+  .panel-head{ display:flex; flex-direction:column; gap:5px; margin-bottom:16px; }
+  .panel-head h2{ font-size: 18px; }
+  .panel-hint{ font-size: 12.5px; color: var(--ink-muted); line-height:1.5; }
+
+  /* ---------- Buttons & inputs ---------- */
+  .btn{
+    font-family:"Manrope",sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 9px 15px;
+    border-radius: 10px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-3);
+    color: var(--ink);
+    cursor: pointer;
+    transition: transform .12s ease, background .15s ease, border-color .15s ease;
+    white-space: nowrap;
+  }
+  .btn:hover{ transform: translateY(-1px); border-color: var(--accent); }
+  .btn:active{ transform: translateY(0); }
+  .btn-ghost{ background: transparent; }
+  .btn-primary{ background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn-primary:hover{ background: var(--accent-strong); }
+  .btn-accent{ background: transparent; border-color: var(--accent); color: var(--accent-strong); }
+  .btn-accent.is-active{ background: var(--accent); color: var(--accent-ink); }
+  .btn:disabled{ opacity:.4; cursor:not-allowed; transform:none; }
+
+  /* ---------- Info tooltips ---------- */
+  .info-tip{ position:relative; display:inline-flex; vertical-align:middle; cursor:help; }
+  .info-tip.icon{
+    width:15px; height:15px; border-radius:50%; background: var(--surface-3);
+    border:1px solid var(--border-strong); color: var(--ink-muted); font-size:10px;
+    font-weight:700; align-items:center; justify-content:center; margin-left:6px; flex:0 0 auto;
+  }
+  .info-tip.term{ border-bottom:1px dashed var(--ink-muted); }
+  .info-tip .tip-bubble{
+    position:absolute; bottom:130%; left:50%; transform:translateX(-50%);
+    width:250px; max-width:64vw; background: rgba(14,14,11,0.97); border:1px solid var(--border-strong);
+    border-radius:10px; padding:10px 12px; font-size:11.5px; line-height:1.55; color: var(--ink-dim);
+    box-shadow: var(--shadow); opacity:0; pointer-events:none; transition: opacity .12s ease; z-index:30;
+    text-align:left; font-weight:400; font-family:"Manrope",sans-serif;
+  }
+  .info-tip:hover .tip-bubble, .info-tip:focus .tip-bubble, .info-tip:focus-within .tip-bubble{ opacity:1; }
+
+  /* ---------- Data panel ---------- */
+  .canvas-toolbar{
+    display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between;
+    gap: 10px; margin-bottom: 12px;
+  }
+  .class-picker, .tool-picker{ display:flex; gap:6px; }
+  .swatch, .tool-btn{
+    display:flex; align-items:center; gap:7px;
+    font-size:12.5px; font-weight:700; color: var(--ink-dim);
+    background: var(--surface-3); border:1px solid var(--border-strong);
+    border-radius: 999px; padding: 6px 12px 6px 8px; cursor:pointer;
+    transition: all .15s ease;
+  }
+  .tool-btn{ padding: 6px 14px; }
+  .swatch .dot{ width:10px; height:10px; border-radius:50%; display:inline-block; }
+  .swatch-a .dot{ background: var(--series-a); }
+  .swatch-b .dot{ background: var(--series-b); }
+  .swatch-c .dot{ background: var(--series-c); }
+  .swatch.active{ color: var(--ink); border-color: currentColor; background: var(--surface); box-shadow: 0 0 0 1px currentColor inset; }
+  .swatch-a.active{ color: var(--series-a); }
+  .swatch-b.active{ color: var(--series-b); }
+  .swatch-c.active{ color: var(--series-c); }
+  .tool-btn.active{ background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+  .tool-options{ margin-bottom: 12px; }
+  .inline-field{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12.5px; color: var(--ink-dim); }
+  .inline-field label{ font-weight:600; color: var(--ink); }
+  .inline-field input[type="number"]{
+    width:66px; background: var(--surface-3); border:1px solid var(--border-strong); border-radius:8px;
+    color: var(--ink); padding:6px 8px; font-family:"IBM Plex Mono",monospace; font-size:12.5px;
+  }
+  .inline-field input[type="range"]{ flex:1; min-width:110px; }
+  .batch-row{
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;
+    font-size:12.5px; color: var(--ink-dim); padding-top:12px; border-top:1px dashed var(--border);
+  }
+  .batch-row label{ font-weight:600; color: var(--ink); }
+  .mode-toggle{ display:flex; gap:6px; }
+  .mode-btn{
+    font-size:11.5px; font-weight:700; padding:6px 12px; border-radius:999px;
+    background: var(--surface-3); border:1px solid var(--border-strong); color: var(--ink-dim); cursor:pointer;
+  }
+  .mode-btn.active{ background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .count-fields{ display:flex; gap:8px; }
+  .count-field{ display:flex; flex-direction:column; gap:3px; }
+  .count-field label{ font-size:10px; text-transform:uppercase; letter-spacing:.06em; font-weight:700; color: var(--ink-muted); }
+  .count-field label.count-label.a{ color: var(--series-a); }
+  .count-field label.count-label.b{ color: var(--series-b); }
+  .count-field label.count-label.c{ color: var(--series-c); }
+  .count-field input[type="number"]{
+    width:56px; background: var(--surface-3); border:1px solid var(--border-strong); border-radius:8px;
+    color: var(--ink); padding:6px 6px; font-family:"IBM Plex Mono",monospace; font-size:12.5px; text-align:center;
+  }
+  .count-field input.has-error{ border-color: var(--error); box-shadow: 0 0 0 1px var(--error); }
+  .count-error-text{ font-size:11.5px; color: var(--error); line-height:1.5; margin: 0 0 14px; }
+
+  .canvas-wrap{ position:relative; width:100%; aspect-ratio: 1/1; border-radius: 12px; overflow:hidden; border:1px solid var(--border-strong); background: #0e0e0b; }
+  .canvas-wrap canvas{ display:block; width:100%; height:100%; cursor: crosshair; touch-action:none; }
+  .canvas-badge{
+    position:absolute; top:10px; right:10px; background: rgba(11,11,9,0.72);
+    border:1px solid var(--border-strong); padding: 4px 10px; border-radius: 999px;
+    font-size:12px; color: var(--ink-dim); backdrop-filter: blur(4px);
+  }
+  .canvas-badge.zoom-badge{ right:auto; left:10px; font-family:"IBM Plex Mono",monospace; }
+  .canvas-zoom-controls{ position:absolute; bottom:10px; right:10px; display:flex; flex-direction:column; gap:6px; }
+  .zoom-btn{
+    width:30px; height:30px; border-radius:8px; background: rgba(11,11,9,0.72);
+    border:1px solid var(--border-strong); color: var(--ink); font-size:15px; font-weight:700;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; backdrop-filter: blur(4px);
+    line-height:1;
+  }
+  .zoom-btn:hover{ border-color: var(--accent); color: var(--accent-strong); }
+  .axis-caption{ margin-top:10px; font-size:12px; color: var(--ink-muted); line-height:1.5; }
+
+  /* ---------- Controls panel ---------- */
+  .slider-row{ margin-bottom: 15px; }
+  .slider-row .row-top{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+  .slider-row label{ font-size:13px; font-weight:600; color: var(--ink); }
+  .slider-row .value{ font-size:13px; color: var(--accent-strong); font-weight:600; font-variant-numeric: tabular-nums; }
+  input[type="range"]{
+    width:100%; -webkit-appearance:none; appearance:none; height:5px; border-radius:4px;
+    background: var(--border-strong); outline:none;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+    background: var(--accent); border: 2px solid var(--accent-ink); cursor:pointer;
+    box-shadow: 0 0 0 2px var(--accent-soft);
+  }
+  input[type="range"]::-moz-range-thumb{
+    width:14px; height:14px; border-radius:50%; background: var(--accent); border:2px solid var(--accent-ink); cursor:pointer;
+  }
+  .check-row{ display:flex; gap:9px; align-items:flex-start; font-size:12.5px; color: var(--ink-dim); line-height:1.5; margin: 14px 0 18px; cursor:pointer; }
+  .check-row input{ margin-top:2px; accent-color: var(--accent); width:15px; height:15px; flex:0 0 auto; }
+  .control-buttons{ display:flex; flex-wrap:wrap; gap:9px; margin-bottom: 14px; }
+  .status-line{
+    font-size:12.5px; color: var(--ink-muted); padding-top:12px; border-top: 1px dashed var(--border);
+    line-height:1.5; min-height: 1.5em;
+  }
+  .status-line b{ color: var(--ink); }
+  .status-line.converged{ color: var(--good); }
+
+  /* ---------- Model state panel ---------- */
+  .model-tabs{ display:flex; gap:8px; margin-bottom:16px; }
+  .model-tab{
+    flex:1; padding:8px; border-radius:9px; border:1px solid var(--border-strong);
+    background: var(--surface-3); color: var(--ink-dim); font-weight:700; font-size:12.5px;
+    cursor:pointer; font-family:"Manrope",sans-serif; transition: all .15s ease;
+  }
+  .model-tab.active{ background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+  .tree-tabs{ display:flex; gap:6px; overflow-x:auto; padding-bottom:10px; margin-bottom:2px; }
+  .tree-tabs::-webkit-scrollbar{ height:6px; }
+  .tree-tabs::-webkit-scrollbar-thumb{ background: var(--border-strong); border-radius:6px; }
+  .tree-tab{
+    flex:0 0 auto; padding:5px 12px; border-radius:8px; border:1px solid var(--border-strong);
+    background: var(--surface-3); color: var(--ink-dim); font-size:11.5px; font-weight:700;
+    cursor:pointer; font-family:"IBM Plex Mono",monospace;
+  }
+  .tree-tab.active{ background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+  .bootstrap-matrix{ margin-bottom: 18px; }
+  .bm-title{ display:flex; align-items:center; font-size:11.5px; text-transform:uppercase; letter-spacing:.08em; color: var(--ink-muted); margin-bottom:9px; font-weight:700; }
+  .bm-grid{ display:flex; flex-wrap:wrap; gap:3px; }
+  .bm-cell{ width:13px; height:13px; border-radius:3px; background: var(--surface-3); border:1px solid var(--border); }
+  .bm-legend{ display:flex; gap:14px; margin-top:9px; font-size:11.5px; color: var(--ink-muted); align-items:center; }
+  .bm-legend i{ width:10px; height:10px; border-radius:3px; display:inline-block; margin-right:5px; vertical-align:-1px; }
+
+  .tree-scroll{ overflow-x:auto; border-top: 1px dashed var(--border); padding-top: 14px; }
+  .tree-scroll svg{ display:block; }
+  .tree-empty{ font-size:13px; color: var(--ink-muted); padding: 20px 0; text-align:center; }
+
+  .forest-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(78px,1fr)); gap:10px; margin-bottom:18px; }
+  .forest-cell{ display:flex; flex-direction:column; align-items:center; gap:5px; }
+  .forest-cell canvas{ border-radius:8px; border:1px solid var(--border-strong); background:#0e0e0b; }
+  .forest-cell span{ font-size:10.5px; color: var(--ink-muted); font-family:"IBM Plex Mono",monospace; }
+  .final-tile{ display:flex; flex-direction:column; align-items:center; gap:9px; padding-top:16px; border-top:1px dashed var(--border); }
+  .final-tile canvas{ border-radius:12px; border:2px solid var(--accent); background:#0e0e0b; }
+  .final-tile span{ font-size:12.5px; font-weight:700; color: var(--accent-strong); text-align:center; }
+
+  /* ---------- Loss panel ---------- */
+  .stat-row{ display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-bottom:16px; }
+  .stat-tile{ background: var(--surface-3); border:1px solid var(--border); border-radius:10px; padding:10px 12px; }
+  .stat-label{ display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color: var(--ink-muted); font-weight:700; margin-bottom:4px; }
+  .stat-value{ font-size:17px; font-weight:600; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .stat-value.good{ color: var(--good); }
+
+  .chart-wrap{ position:relative; }
+  .chart-wrap svg{ width:100%; height:auto; display:block; }
+  .chart-tooltip{
+    position:absolute; pointer-events:none; background: rgba(14,14,11,0.92);
+    border:1px solid var(--border-strong); border-radius:8px; padding:7px 10px;
+    font-size:11.5px; line-height:1.5; color: var(--ink-dim); white-space:nowrap;
+    transform: translate(-50%, -115%); box-shadow: var(--shadow);
+  }
+  .chart-tooltip b{ color: var(--ink); }
+  .legend-row{ display:flex; gap:18px; margin-top:10px; font-size:12px; color: var(--ink-dim); }
+  .legend-item{ display:flex; align-items:center; gap:6px; }
+  .swatch-line{ width:16px; height:2px; display:inline-block; background: var(--series-a); }
+  .swatch-line.train{ background: var(--ink-muted); }
+
+  /* ---------- Footer ---------- */
+  .site-footer{
+    flex: 0 0 auto;
+    border-top: 1px solid var(--border);
+    padding: 13px 34px;
+    display:flex; flex-wrap:wrap; gap: 10px 22px;
+    align-items:center; justify-content:space-between;
+    font-size:12px; color: var(--ink-muted);
+  }
+  .members{ display:flex; flex-wrap:wrap; gap: 6px 16px; }
+  .members span{ white-space:nowrap; }
+  .credit{ font-weight:700; color: var(--ink-dim); letter-spacing:.02em; }
+  .credit .accent{ color: var(--gold); }
+
+  @media (max-width: 900px){
+    html,body{ height:auto; }
+    .workspace{ display:flex; flex-direction:column; }
+    .column{ overflow:visible; max-height:none; padding-right:0; }
+    body{ min-height:100vh; height:auto; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; animation:none !important; }
+  }
+</style>
+</head>
+<body>
+
+  <header class="site-header">
+    <p class="eyebrow">Interactive Machine Learning Visualization</p>
+    <h1>Random Forest, Step by Step</h1>
+    <p class="lede">A random forest grows many decision trees, each on a <strong>bootstrap-resampled</strong> copy of the data, and lets every split consider only a <strong>random subset of features</strong>. Averaging their votes turns a flock of overfit, high-variance trees into one stable predictor.</p>
+  </header>
+
+  <main class="workspace">
+    <section class="column column-left">
+
+      <article class="panel" id="panel-data">
+        <div class="panel-head">
+          <h2>Data Canvas</h2>
+          <p class="panel-hint">Pick a tool below: <b>Add</b> paints points inside a brush circle; <b>Erase</b> drags to wipe points; <b>Pan</b> drags the view. Scroll (or the +/− buttons) zooms in and out.</p>
+        </div>
+        <div class="canvas-toolbar">
+          <div class="class-picker" role="group" aria-label="Point class">
+            <button class="swatch swatch-a active" data-cls="0" type="button"><span class="dot"></span>Class A</button>
+            <button class="swatch swatch-b" data-cls="1" type="button"><span class="dot"></span>Class B</button>
+            <button class="swatch swatch-c" data-cls="2" type="button"><span class="dot"></span>Class C</button>
+          </div>
+          <div class="tool-picker" role="group" aria-label="Canvas tool">
+            <button class="tool-btn active" data-tool="add" id="btnToolAdd" type="button">✏️ Add</button>
+            <button class="tool-btn" data-tool="erase" id="btnToolErase" type="button">🧹 Erase</button>
+            <button class="tool-btn" data-tool="pan" id="btnToolPan" type="button">🖐 Pan</button>
+          </div>
+        </div>
+
+        <div class="tool-options" id="addOptions">
+          <div class="inline-field">
+            <label for="inAddBrushSize">Brush Size</label>
+            <input type="range" id="inAddBrushSize" min="6" max="70" value="18" step="2">
+            <span class="value" id="valAddBrushSize">18px</span>
+            <span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Click or drag on the canvas to paint points of the selected class inside this brush radius — just like the eraser, but adding instead of removing. A bigger brush spreads points over a wider area.</span></span>
+          </div>
+          <div class="inline-field">
+            <label for="inAddDensity">Density</label>
+            <input type="range" id="inAddDensity" min="1" max="12" value="3" step="1">
+            <span class="value" id="valAddDensity">3</span>
+            <span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">How many points get scattered per brush stamp. Higher density fills a cluster quickly and tightly; lower density spaces points out — drag slowly for finer control.</span></span>
+          </div>
+          <div class="inline-field">
+            <label for="inManualX">x</label>
+            <input type="number" id="inManualX" min="0" max="100" value="50" step="1">
+            <label for="inManualY">y</label>
+            <input type="number" id="inManualY" min="0" max="100" value="50" step="1">
+            <button id="btnAddManual" class="btn btn-ghost" type="button">Add Point at (x, y)</button>
+            <span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Type exact Feature₁ (x) / Feature₂ (y) values on a 0–100 scale for the selected class, instead of painting freehand — useful for placing a single point precisely.</span></span>
+          </div>
+        </div>
+        <div class="tool-options" id="eraseOptions" hidden>
+          <div class="inline-field">
+            <label for="inEraserSize">Eraser Size</label>
+            <input type="range" id="inEraserSize" min="8" max="70" value="24" step="2">
+            <span class="value" id="valEraserSize">24px</span>
+            <span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Click or drag across the canvas to remove every point that falls inside the eraser circle. Make it bigger to clear a whole cluster at once.</span></span>
+          </div>
+        </div>
+
+        <div class="batch-row">
+          <div class="mode-toggle" role="group" aria-label="Point count mode">
+            <button class="mode-btn active" data-mode="total" id="btnModeTotal" type="button">Total (N)</button>
+            <button class="mode-btn" data-mode="perclass" id="btnModePerClass" type="button">Per Class</button>
+          </div>
+          <div class="count-fields" id="totalModeFields">
+            <div class="count-field"><label for="inTotalN">N</label><input type="number" id="inTotalN" value="48" step="1"></div>
+          </div>
+          <div class="count-fields" id="perClassModeFields" hidden>
+            <div class="count-field"><label for="inCountA" class="count-label a">A</label><input type="number" id="inCountA" value="16" step="1"></div>
+            <div class="count-field"><label for="inCountB" class="count-label b">B</label><input type="number" id="inCountB" value="16" step="1"></div>
+            <div class="count-field"><label for="inCountC" class="count-label c">C</label><input type="number" id="inCountC" value="16" step="1"></div>
+          </div>
+          <button id="btnAddRandom" class="btn btn-ghost" type="button">Add Random Points</button>
+          <button id="btnClearPts" class="btn btn-ghost" type="button">Clear All</button>
+          <span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Total mode samples N points split evenly across classes A/B/C. Per Class mode lets you set an exact count for each class. Either way, "Add Random Points" appends the new points to whatever is already on the canvas — use "Clear All" first to start fresh.</span></span>
+        </div>
+        <p class="count-error-text" id="countError" hidden></p>
+
+        <div class="canvas-wrap">
+          <canvas id="dataCanvas"></canvas>
+          <div class="canvas-badge" id="pointCount">N = 0</div>
+          <div class="canvas-badge zoom-badge" id="zoomBadge">1.0×</div>
+          <div class="canvas-zoom-controls">
+            <button class="zoom-btn" id="btnZoomIn" type="button" title="Zoom in">+</button>
+            <button class="zoom-btn" id="btnZoomOut" type="button" title="Zoom out">−</button>
+            <button class="zoom-btn" id="btnZoomReset" type="button" title="Reset view">⤢</button>
+          </div>
+        </div>
+        <p class="axis-caption"><b>x</b> = Feature₁ &nbsp;·&nbsp; <b>y</b> = Feature₂ — shaded regions show the current ensemble's decision boundary, recomputed after every tree. <span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Every pixel is run through all trees built so far; each tree casts one vote for a class, and the pixel is shaded with whichever class wins the most votes.</span></span></p>
+      </article>
+
+      <article class="panel" id="panel-controls">
+        <div class="panel-head">
+          <h2>Hyperparameters &amp; Controls</h2>
+          <p class="panel-hint">Changing a setting resets the forest so every tree is grown under the same rules.</p>
+        </div>
+
+        <div class="slider-row">
+          <div class="row-top"><label for="inNumFeatures">Number of Features (F)<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Only x and y are plotted spatially. Extra features (f₃, f₄, …) are independent random noise, unrelated to the class label — they exist so "random feature subspace" below has more to pick from, showing how a forest resists being fooled by useless features. The Data Canvas boundary is drawn holding any noise features at their average value (0.5).</span></span></label><span class="value" id="valNumFeatures">x, y</span></div>
+          <input type="range" id="inNumFeatures" min="2" max="6" value="2" step="1">
+        </div>
+        <div class="slider-row">
+          <div class="row-top"><label for="inNTrees">Number of Trees (T)<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">How many bootstrap trees to grow and average by majority vote. More trees reduce the forest's variance but eventually plateau — watch the Error Curve flatten out.</span></span></label><span class="value" id="valNTrees">12</span></div>
+          <input type="range" id="inNTrees" min="1" max="40" value="12" step="1">
+        </div>
+        <div class="slider-row">
+          <div class="row-top"><label for="inMaxDepth">Max Depth<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Longest path from the root to a leaf. Shallow trees underfit (high bias); very deep trees memorize noise (high variance) — the forest tames that variance by averaging many deep, noisy trees together.</span></span></label><span class="value" id="valMaxDepth">3</span></div>
+          <input type="range" id="inMaxDepth" min="1" max="10" value="3" step="1">
+        </div>
+        <div class="slider-row">
+          <div class="row-top"><label for="inMinSamples">Min Samples to Split<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">A node stops splitting once it holds fewer points than this, even if it isn't pure yet. Raising it prunes small, noise-driven splits near the leaves.</span></span></label><span class="value" id="valMinSamples">4</span></div>
+          <input type="range" id="inMinSamples" min="2" max="12" value="4" step="1">
+        </div>
+        <div class="slider-row">
+          <div class="row-top"><label for="inBootstrap">Bootstrap Sample Size<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Fraction of the dataset re-drawn WITH replacement to train each tree ("bootstrap AGGregatING" = bagging). Points a tree never draws become that tree's out-of-bag (OOB) set, used to estimate error for free.</span></span></label><span class="value" id="valBootstrap">100%</span></div>
+          <input type="range" id="inBootstrap" min="0.4" max="1" value="1" step="0.05">
+        </div>
+
+        <label class="check-row">
+          <input type="checkbox" id="inFeatRandom" checked>
+          <span>Random feature subspace at each split — consider only a random subset of size <b class="mono">⌈√F⌉</b> features per node (F = Number of Features above). This is the "random" in Random Forest; unchecking it degrades the ensemble to plain bagging (every split sees all F features).</span>
+        </label>
+
+        <div class="control-buttons">
+          <button id="btnStep" class="btn btn-primary" type="button">Step ▸ Grow One Tree</button>
+          <button id="btnPlay" class="btn btn-accent" type="button">Play to Convergence ▶▶</button>
+          <button id="btnReset" class="btn btn-ghost" type="button">Reset Forest ⟲</button>
+        </div>
+        <div class="status-line" id="statusLine">Forest not started — press <b>Step</b> or <b>Play</b> to grow the first tree.</div>
+      </article>
+
+    </section>
+
+    <section class="column column-right">
+
+      <article class="panel" id="panel-model">
+        <div class="panel-head">
+          <h2>Model State</h2>
+          <p class="panel-hint">Gini impurity <span class="info-tip term mono" tabindex="0">G = 1 − Σ pᵢ²<span class="tip-bubble">Measures how mixed the classes are in a node: G = 0 means the node is pure (one class only), higher G means more mixed. Every candidate threshold is scored by the weighted-average Gini of its two children, and the split that minimizes it wins.</span></span> &nbsp;·&nbsp; ensemble vote <span class="info-tip term mono" tabindex="0">ŷ = mode( h₁(x), …, h_T(x) )<span class="tip-bubble">Each of the T trees casts one vote for a class at point x; the forest predicts whichever class received the most votes.</span></span></p>
+        </div>
+
+        <div class="model-tabs">
+          <button class="model-tab active" data-tab="detail" type="button">Tree Detail</button>
+          <button class="model-tab" data-tab="overview" type="button">Forest Overview</button>
+        </div>
+
+        <div id="modelDetailView">
+          <div class="tree-tabs" id="treeTabs"></div>
+
+          <div class="bootstrap-matrix">
+            <div class="bm-title">Bootstrap Weights <span id="bmTitleText">— no tree yet</span><span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Bagging = Bootstrap AGGregatING. Each tree trains on N draws made WITH replacement from the N original points — some points get picked several times, some are skipped entirely (out-of-bag) for that tree.</span></span></div>
+            <div class="bm-grid" id="bmGrid"></div>
+            <div class="bm-legend">
+              <span><i style="background:var(--surface-3); border:1px solid var(--border);"></i>out-of-bag (0×)</span>
+              <span><i style="background:#3987e5aa;"></i>sampled 1×</span>
+              <span><i style="background:#3987e5;"></i>sampled 3×+</span>
+            </div>
+          </div>
+
+          <div class="tree-scroll" id="treeScroll">
+            <div class="tree-empty">Grow a tree to see its split structure here.</div>
+          </div>
+        </div>
+
+        <div id="modelOverviewView" hidden>
+          <p class="panel-hint" style="margin-bottom:14px;">Each tile is one tree's own decision boundary, trained on only its own bootstrap sample. The highlighted tile combines all of them by majority vote — the forest's actual output, identical to the boundary shown on the Data Canvas.</p>
+          <div class="forest-grid" id="forestGrid"></div>
+          <div class="final-tile" id="finalTile"></div>
+        </div>
+      </article>
+
+      <article class="panel" id="panel-loss">
+        <div class="panel-head">
+          <h2>Error Curve</h2>
+          <p class="panel-hint">Out-of-bag (OOB) error re-uses each tree's unsampled points as a free validation set — no held-out test split required.</p>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-tile"><span class="stat-label">Trees Built<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">How many trees have been grown so far out of the requested total T.</span></span></span><span class="stat-value" id="statTrees">0 / 12</span></div>
+          <div class="stat-tile"><span class="stat-label">OOB Error<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Only trees that did NOT see a point in their bootstrap sample vote on it. Comparing that out-of-bag vote to the true label estimates generalization error without needing a separate test set.</span></span></span><span class="stat-value" id="statOob">—</span></div>
+          <div class="stat-tile"><span class="stat-label">Training Error<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Fraction of points the full ensemble gets wrong when every tree votes — including trees that already saw that point while training, so it tends to look more optimistic than OOB error.</span></span></span><span class="stat-value" id="statTrain">—</span></div>
+        </div>
+
+        <div class="chart-wrap" id="chartWrap">
+          <svg id="lossSvg" viewBox="0 0 640 260" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="chart-tooltip" id="chartTooltip" hidden></div>
+        </div>
+        <div class="legend-row">
+          <span class="legend-item"><i class="swatch-line oob"></i>OOB Error</span>
+          <span class="legend-item"><i class="swatch-line train"></i>Training Error</span>
+        </div>
+      </article>
+
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="members">
+      <span>66010575 พิมพ์สิริน สุวรรณบุตร</span>
+      <span>66010751 วรินทร ลู่โรจน์เรือง</span>
+      <span>66010752 วรินธร หวังประเสริฐกุล</span>
+      <span>66010933 อาริยา อังศุวัฒนา</span>
+      <span>66011452 ภาราดา โพยนอก</span>
+    </div>
+    <div class="credit">CE <span class="accent">KMITL</span></div>
+  </footer>
+
+<script>
+(function(){
+  "use strict";
+
+  const CLASS_COLORS = ['#3987e5', '#d95926', '#199e70'];
+  const CLASS_NAMES  = ['A', 'B', 'C'];
+
+  const ACCENT_HEX = '#ab9ff4';
+
+  const state = {
+    data: [],
+    trees: [],
+    treeMeta: [],
+    selectedTreeIdx: -1,
+    oobVotes: [],
+    lossHistory: [],
+    selectedClass: 0,
+    countMode: 'total',
+    tool: 'add',
+    eraserSize: 24,
+    erasing: false,
+    addBrushSize: 18,
+    addDensity: 3,
+    painting: false,
+    lastStampPos: null,
+    pointerPos: null,
+    panning: false,
+    panStartClient: null,
+    panStartView: null,
+    view: { zoom: 1, cx: 0.5, cy: 0.5 },
+    playing: false,
+    playTimer: null
+  };
+
+  // ---------- DOM refs ----------
+  const canvas = document.getElementById('dataCanvas');
+  const ctx = canvas.getContext('2d');
+  const pointCountEl = document.getElementById('pointCount');
+
+  const inNumFeatures = document.getElementById('inNumFeatures');
+  const valNumFeatures = document.getElementById('valNumFeatures');
+  const inNTrees = document.getElementById('inNTrees');
+  const inMaxDepth = document.getElementById('inMaxDepth');
+  const inMinSamples = document.getElementById('inMinSamples');
+  const inBootstrap = document.getElementById('inBootstrap');
+  const inFeatRandom = document.getElementById('inFeatRandom');
+  const valNTrees = document.getElementById('valNTrees');
+  const valMaxDepth = document.getElementById('valMaxDepth');
+  const valMinSamples = document.getElementById('valMinSamples');
+  const valBootstrap = document.getElementById('valBootstrap');
+
+  const btnStep = document.getElementById('btnStep');
+  const btnPlay = document.getElementById('btnPlay');
+  const btnReset = document.getElementById('btnReset');
+  const btnClearPts = document.getElementById('btnClearPts');
+  const btnToolAdd = document.getElementById('btnToolAdd');
+  const btnToolErase = document.getElementById('btnToolErase');
+  const btnToolPan = document.getElementById('btnToolPan');
+  const btnAddRandom = document.getElementById('btnAddRandom');
+  const btnZoomIn = document.getElementById('btnZoomIn');
+  const btnZoomOut = document.getElementById('btnZoomOut');
+  const btnZoomReset = document.getElementById('btnZoomReset');
+  const zoomBadge = document.getElementById('zoomBadge');
+  const addOptions = document.getElementById('addOptions');
+  const eraseOptions = document.getElementById('eraseOptions');
+  const inEraserSize = document.getElementById('inEraserSize');
+  const valEraserSize = document.getElementById('valEraserSize');
+  const inAddBrushSize = document.getElementById('inAddBrushSize');
+  const valAddBrushSize = document.getElementById('valAddBrushSize');
+  const inAddDensity = document.getElementById('inAddDensity');
+  const valAddDensity = document.getElementById('valAddDensity');
+  const inManualX = document.getElementById('inManualX');
+  const inManualY = document.getElementById('inManualY');
+  const btnAddManual = document.getElementById('btnAddManual');
+  const btnModeTotal = document.getElementById('btnModeTotal');
+  const btnModePerClass = document.getElementById('btnModePerClass');
+  const totalModeFields = document.getElementById('totalModeFields');
+  const perClassModeFields = document.getElementById('perClassModeFields');
+  const inTotalN = document.getElementById('inTotalN');
+  const inCountA = document.getElementById('inCountA');
+  const inCountB = document.getElementById('inCountB');
+  const inCountC = document.getElementById('inCountC');
+  const countError = document.getElementById('countError');
+  const statusLine = document.getElementById('statusLine');
+
+  const bmTitleText = document.getElementById('bmTitleText');
+  const bmGrid = document.getElementById('bmGrid');
+  const treeScroll = document.getElementById('treeScroll');
+  const treeTabsEl = document.getElementById('treeTabs');
+  const forestGrid = document.getElementById('forestGrid');
+  const finalTile = document.getElementById('finalTile');
+  const modelDetailView = document.getElementById('modelDetailView');
+  const modelOverviewView = document.getElementById('modelOverviewView');
+
+  const statTrees = document.getElementById('statTrees');
+  const statOob = document.getElementById('statOob');
+  const statTrain = document.getElementById('statTrain');
+  const lossSvg = document.getElementById('lossSvg');
+  const chartWrap = document.getElementById('chartWrap');
+  const chartTooltip = document.getElementById('chartTooltip');
+
+  // ---------- Params ----------
+  function getExtraFeatureKeys(n){
+    n = n === undefined ? +inNumFeatures.value : n;
+    const keys = [];
+    for(let i=3;i<=n;i++) keys.push('f'+i);
+    return keys;
+  }
+  function getFeatureKeys(n){
+    return ['x','y', ...getExtraFeatureKeys(n)];
+  }
+  function shuffleArray(arr){
+    const a = arr.slice();
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]] = [a[j],a[i]];
+    }
+    return a;
+  }
+  function ensurePointFeatures(p, keys){
+    keys.forEach(k => { if(p[k] === undefined) p[k] = Math.random(); });
+    Object.keys(p).forEach(k => {
+      if(k !== 'x' && k !== 'y' && k !== 'cls' && !keys.includes(k)) delete p[k];
+    });
+  }
+  function makeDataPoint(x, y, cls){
+    const p = { x, y, cls };
+    ensurePointFeatures(p, getExtraFeatureKeys());
+    return p;
+  }
+  function makeGridPoint(x, y){
+    const p = { x, y };
+    getExtraFeatureKeys().forEach(k => { p[k] = 0.5; });
+    return p;
+  }
+  function syncFeatureCount(){
+    const keys = getExtraFeatureKeys();
+    state.data.forEach(p => ensurePointFeatures(p, keys));
+  }
+
+  function getParams(){
+    const nFeatures = +inNumFeatures.value;
+    return {
+      nTrees: +inNTrees.value,
+      maxDepth: +inMaxDepth.value,
+      minSamples: +inMinSamples.value,
+      bootstrapRatio: +inBootstrap.value,
+      featureRandom: inFeatRandom.checked,
+      nFeatures,
+      featureKeys: getFeatureKeys(nFeatures)
+    };
+  }
+
+  // ---------- Random data ----------
+  function gaussian(){
+    let u = 0, v = 0;
+    while(u === 0) u = Math.random();
+    while(v === 0) v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function clamp01(v){ return Math.min(0.96, Math.max(0.04, v)); }
+
+  const CLUSTER_CENTERS = [
+    { cx: 0.26, cy: 0.32, spread: 0.10 },
+    { cx: 0.74, cy: 0.28, spread: 0.10 },
+    { cx: 0.50, cy: 0.76, spread: 0.11 }
+  ];
+  function generatePointsForClass(cls, n){
+    const c = CLUSTER_CENTERS[cls];
+    const pts = [];
+    for(let i=0;i<n;i++){
+      pts.push(makeDataPoint(
+        clamp01(c.cx + gaussian()*c.spread),
+        clamp01(c.cy + gaussian()*c.spread),
+        cls
+      ));
+    }
+    return pts;
+  }
+  function generateRandomData(total){
+    total = Math.max(3, Math.round(total || 48));
+    const base = Math.floor(total / 3);
+    const remainder = total - base * 3;
+    let pts = [];
+    for(let cls=0; cls<3; cls++){
+      const n = base + (cls < remainder ? 1 : 0);
+      pts = pts.concat(generatePointsForClass(cls, n));
+    }
+    return pts;
+  }
+  function generateRandomDataByClass(counts){
+    let pts = [];
+    for(let cls=0; cls<3; cls++){
+      pts = pts.concat(generatePointsForClass(cls, Math.max(0, Math.round(counts[cls] || 0))));
+    }
+    return pts;
+  }
+
+  // ---------- Tree building ----------
+  function gini(idxs){
+    const counts = [0,0,0];
+    for(const i of idxs) counts[state.data[i].cls]++;
+    const n = idxs.length;
+    if(n === 0) return 0;
+    let sum = 0;
+    for(const c of counts){ const p = c/n; sum += p*p; }
+    return 1 - sum;
+  }
+  function argmax(arr){ let bi=0; for(let i=1;i<arr.length;i++) if(arr[i]>arr[bi]) bi=i; return bi; }
+  function majority(idxs){
+    const counts=[0,0,0];
+    for(const i of idxs) counts[state.data[i].cls]++;
+    return argmax(counts);
+  }
+
+  function buildNode(idxs, depth, params){
+    const n = idxs.length;
+    const g = gini(idxs);
+    const present = new Set(idxs.map(i => state.data[i].cls));
+    if(depth >= params.maxDepth || n < params.minSamples || present.size === 1){
+      return { leaf:true, cls: majority(idxs), n, gini:g };
+    }
+    let feats = params.featureKeys;
+    if(params.featureRandom){
+      const k = Math.max(1, Math.round(Math.sqrt(feats.length)));
+      feats = shuffleArray(feats).slice(0, k);
+    }
+
+    let best = null;
+    for(const feat of feats){
+      const vals = [...new Set(idxs.map(i => state.data[i][feat]))].sort((a,b)=>a-b);
+      for(let k=0;k<vals.length-1;k++){
+        const th = (vals[k] + vals[k+1]) / 2;
+        const left = idxs.filter(i => state.data[i][feat] <= th);
+        const right = idxs.filter(i => state.data[i][feat] > th);
+        if(left.length === 0 || right.length === 0) continue;
+        const wg = (left.length*gini(left) + right.length*gini(right)) / n;
+        if(!best || wg < best.wg) best = { feat, th, wg, left, right };
+      }
+    }
+    if(!best) return { leaf:true, cls: majority(idxs), n, gini:g };
+    return {
+      leaf:false, feat: best.feat, th: best.th, n, gini:g,
+      left: buildNode(best.left, depth+1, params),
+      right: buildNode(best.right, depth+1, params)
+    };
+  }
+
+  function buildTree(params){
+    const N = state.data.length;
+    const n = Math.max(2, Math.round(N * params.bootstrapRatio));
+    const counts = new Array(N).fill(0);
+    const idxs = [];
+    for(let i=0;i<n;i++){
+      const r = Math.floor(Math.random() * N);
+      idxs.push(r);
+      counts[r]++;
+    }
+    const rootGini = gini(idxs);
+    const root = buildNode(idxs, 0, params);
+    return { root, bootstrapCounts: counts, rootGini };
+  }
+
+  function predictTree(node, pt){
+    let cur = node;
+    while(!cur.leaf) cur = (pt[cur.feat] <= cur.th) ? cur.left : cur.right;
+    return cur.cls;
+  }
+  function ensemblePredict(pt, trees){
+    if(trees.length === 0) return null;
+    const counts = [0,0,0];
+    for(const t of trees) counts[predictTree(t, pt)]++;
+    return argmax(counts);
+  }
+
+  // ---------- Step / metrics ----------
+  function computeTrainingError(){
+    if(state.data.length === 0 || state.trees.length === 0) return null;
+    let mism = 0;
+    for(const p of state.data){ if(ensemblePredict(p, state.trees) !== p.cls) mism++; }
+    return mism / state.data.length;
+  }
+  function updateOobVotes(root, counts){
+    for(let i=0;i<counts.length;i++){
+      if(counts[i] === 0){
+        const pred = predictTree(root, state.data[i]);
+        state.oobVotes[i][pred]++;
+      }
+    }
+  }
+  function computeOobError(){
+    let mism = 0, total = 0;
+    for(let i=0;i<state.data.length;i++){
+      const v = state.oobVotes[i];
+      const sum = v[0]+v[1]+v[2];
+      if(sum > 0){
+        total++;
+        if(argmax(v) !== state.data[i].cls) mism++;
+      }
+    }
+    return total > 0 ? mism/total : null;
+  }
+
+  function setStatus(html, cls){
+    statusLine.innerHTML = html;
+    statusLine.className = 'status-line' + (cls ? ' ' + cls : '');
+  }
+
+  function doStep(){
+    if(state.data.length < 2){
+      setStatus('Add at least two data points before growing a tree.');
+      return false;
+    }
+    const params = getParams();
+    if(state.trees.length >= params.nTrees){
+      setStatus('Already at the requested tree count — raise <b>T</b> or press <b>Reset</b>.');
+      return false;
+    }
+    const { root, bootstrapCounts } = buildTree(params);
+    state.trees.push(root);
+    state.treeMeta.push({ counts: bootstrapCounts });
+    state.selectedTreeIdx = state.trees.length - 1;
+    updateOobVotes(root, bootstrapCounts);
+
+    const trainErr = computeTrainingError();
+    const oobErr = computeOobError();
+    state.lossHistory.push({ t: state.trees.length, train: trainErr, oob: oobErr });
+
+    updateBoundaryCache();
+    redrawCanvas();
+    renderModelPanel();
+    renderLossChart();
+    updateStats(params);
+    setStatus(`Grew tree <b>#${state.trees.length}</b> from a bootstrap sample of <b>${bootstrapCounts.reduce((a,b)=>a+b,0)}</b> draws.`);
+    return true;
+  }
+
+  function checkConverged(params){
+    if(state.lossHistory.length < 6) return false;
+    const last5 = state.lossHistory.slice(-5).map(h => h.oob).filter(v => v !== null);
+    if(last5.length < 5) return false;
+    const range = Math.max(...last5) - Math.min(...last5);
+    return range < 0.015;
+  }
+
+  function tick(){
+    if(!state.playing) return;
+    const params = getParams();
+    if(state.trees.length >= params.nTrees){ stopPlaying('cap'); return; }
+    const ok = doStep();
+    if(!ok){ stopPlaying(); return; }
+    if(!state.playing) return;
+    const p2 = getParams();
+    if(state.trees.length >= p2.nTrees){ stopPlaying('cap'); return; }
+    if(checkConverged(p2)){ stopPlaying('converged'); return; }
+    state.playTimer = setTimeout(tick, 550);
+  }
+  function startPlaying(){
+    if(state.playing) return;
+    if(state.data.length < 2){ setStatus('Add at least two data points before playing.'); return; }
+    state.playing = true;
+    btnPlay.textContent = 'Pause ❙❙';
+    btnPlay.classList.add('is-active');
+    tick();
+  }
+  function stopPlaying(reason){
+    state.playing = false;
+    clearTimeout(state.playTimer);
+    btnPlay.textContent = 'Play to Convergence ▶▶';
+    btnPlay.classList.remove('is-active');
+    if(reason === 'converged') setStatus('<b>Converged</b> — OOB error has stayed flat over the last 5 trees.', 'converged');
+    else if(reason === 'cap') setStatus(`Reached the requested <b>${getParams().nTrees}</b> trees.`);
+  }
+
+  function resetForest(){
+    stopPlaying();
+    state.trees = [];
+    state.treeMeta = [];
+    state.selectedTreeIdx = -1;
+    state.lossHistory = [];
+    state.oobVotes = state.data.map(() => [0,0,0]);
+    updateBoundaryCache();
+    redrawCanvas();
+    renderModelPanel();
+    renderLossChart();
+    updateStats(getParams());
+    setStatus('Forest reset — press <b>Step</b> or <b>Play</b> to grow the first tree.');
+  }
+
+  function setData(newData){
+    state.data = newData;
+    resetForest();
+    updatePointCount();
+    redrawCanvas();
+  }
+
+  function updatePointCount(){
+    pointCountEl.textContent = `N = ${state.data.length}`;
+  }
+
+  function updateStats(params){
+    statTrees.textContent = `${state.trees.length} / ${params.nTrees}`;
+    const last = state.lossHistory[state.lossHistory.length - 1];
+    statOob.textContent = (last && last.oob !== null) ? (last.oob*100).toFixed(1) + '%' : '—';
+    statOob.className = 'stat-value' + (last && last.oob !== null && last.oob < 0.15 ? ' good' : '');
+    statTrain.textContent = (last && last.train !== null) ? (last.train*100).toFixed(1) + '%' : '—';
+  }
+
+  // ---------- Canvas ----------
+  function resizeCanvas(){
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  const GRID_N = 46;
+  const RGB_COLORS = [[57,135,229],[217,89,38],[25,158,112]];
+  const boundaryCanvas = document.createElement('canvas');
+  boundaryCanvas.width = GRID_N; boundaryCanvas.height = GRID_N;
+  const bctx = boundaryCanvas.getContext('2d');
+  let hasBoundary = false;
+
+  function updateBoundaryCache(){
+    if(state.trees.length === 0){ hasBoundary = false; return; }
+    hasBoundary = true;
+    const img = bctx.createImageData(GRID_N, GRID_N);
+    for(let gy=0; gy<GRID_N; gy++){
+      for(let gx=0; gx<GRID_N; gx++){
+        const x = (gx + 0.5) / GRID_N;
+        const y = (gy + 0.5) / GRID_N;
+        const pred = ensemblePredict(makeGridPoint(x,y), state.trees);
+        const c = RGB_COLORS[pred];
+        const idx = (gy*GRID_N + gx) * 4;
+        img.data[idx] = c[0]; img.data[idx+1] = c[1]; img.data[idx+2] = c[2]; img.data[idx+3] = 62;
+      }
+    }
+    bctx.putImageData(img, 0, 0);
+  }
+
+  // ---------- Pan / zoom view transform ----------
+  function getViewBounds(){
+    const half = 0.5 / state.view.zoom;
+    return {
+      minX: state.view.cx - half, maxX: state.view.cx + half,
+      minY: state.view.cy - half, maxY: state.view.cy + half
+    };
+  }
+  function pixelsPerDataUnit(W){
+    const b = getViewBounds();
+    return W / (b.maxX - b.minX);
+  }
+  function dataToPixel(x, y, W, H){
+    const b = getViewBounds();
+    return {
+      x: (x - b.minX) / (b.maxX - b.minX) * W,
+      y: (y - b.minY) / (b.maxY - b.minY) * H
+    };
+  }
+  function pixelToData(px, py, W, H){
+    const b = getViewBounds();
+    return {
+      x: b.minX + (px / W) * (b.maxX - b.minX),
+      y: b.minY + (py / H) * (b.maxY - b.minY)
+    };
+  }
+  function clampView(){
+    state.view.cx = Math.min(1, Math.max(0, state.view.cx));
+    state.view.cy = Math.min(1, Math.max(0, state.view.cy));
+  }
+  function updateZoomBadge(){
+    zoomBadge.textContent = state.view.zoom.toFixed(1) + '×';
+  }
+  function zoomBy(factor, pivotPx){
+    const rect = canvas.getBoundingClientRect();
+    const px = pivotPx ? pivotPx.x : rect.width/2;
+    const py = pivotPx ? pivotPx.y : rect.height/2;
+    const before = pixelToData(px, py, rect.width, rect.height);
+    state.view.zoom = Math.min(10, Math.max(0.2, state.view.zoom * factor));
+    const half = 0.5 / state.view.zoom;
+    state.view.cx = before.x - ((2*px/rect.width) - 1) * half;
+    state.view.cy = before.y - ((2*py/rect.height) - 1) * half;
+    clampView();
+    updateZoomBadge();
+    redrawCanvas();
+  }
+
+  function redrawCanvas(){
+    const rect = canvas.getBoundingClientRect();
+    const W = rect.width, H = rect.height;
+    ctx.clearRect(0, 0, W, H);
+    const b = getViewBounds();
+
+    if(hasBoundary){
+      ctx.imageSmoothingEnabled = false;
+      const srcX = b.minX*GRID_N, srcY = b.minY*GRID_N;
+      const srcW = (b.maxX-b.minX)*GRID_N, srcH = (b.maxY-b.minY)*GRID_N;
+      ctx.drawImage(boundaryCanvas, srcX, srcY, srcW, srcH, 0, 0, W, H);
+      ctx.imageSmoothingEnabled = true;
+    }
+
+    // grid lines at data fractions 0, 0.1, ... 1
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    for(let i=0;i<=10;i++){
+      const gx = dataToPixel(i/10, 0, W, H).x;
+      ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,H); ctx.stroke();
+      const gy = dataToPixel(0, i/10, W, H).y;
+      ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(W,gy); ctx.stroke();
+    }
+
+    // points
+    for(const p of state.data){
+      const pt = dataToPixel(p.x, p.y, W, H);
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 6, 0, Math.PI*2);
+      ctx.fillStyle = CLASS_COLORS[p.cls];
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#0b0b09';
+      ctx.stroke();
+    }
+
+    // brush cursor preview
+    if(state.pointerPos && state.tool !== 'pan'){
+      const pt = dataToPixel(state.pointerPos.x, state.pointerPos.y, W, H);
+      ctx.setLineDash([4,3]);
+      ctx.lineWidth = 1.5;
+      if(state.tool === 'erase'){
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, state.eraserSize, 0, Math.PI*2);
+        ctx.fillStyle = 'rgba(171,159,244,0.14)';
+        ctx.fill();
+        ctx.strokeStyle = ACCENT_HEX;
+        ctx.stroke();
+      } else if(state.tool === 'add'){
+        const color = CLASS_COLORS[state.selectedClass];
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, state.addBrushSize, 0, Math.PI*2);
+        ctx.fillStyle = color + '22';
+        ctx.fill();
+        ctx.strokeStyle = color;
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+    }
+  }
+
+  function canvasPointFromEvent(e){
+    const rect = canvas.getBoundingClientRect();
+    return pixelToData(e.clientX - rect.left, e.clientY - rect.top, rect.width, rect.height);
+  }
+
+  function eraseAt(xData, yData){
+    const rect = canvas.getBoundingClientRect();
+    const ppdu = pixelsPerDataUnit(rect.width);
+    const before = state.data.length;
+    state.data = state.data.filter(p => {
+      const dx = (p.x-xData)*ppdu, dy = (p.y-yData)*ppdu;
+      return Math.sqrt(dx*dx + dy*dy) > state.eraserSize;
+    });
+    if(state.data.length !== before){
+      resetForest();
+      updatePointCount();
+    }
+  }
+
+  function stampAdd(xData, yData){
+    const rect = canvas.getBoundingClientRect();
+    const ppdu = pixelsPerDataUnit(rect.width);
+    for(let i=0;i<state.addDensity;i++){
+      const angle = Math.random()*Math.PI*2;
+      const r = state.addBrushSize*Math.sqrt(Math.random());
+      const dx = (r*Math.cos(angle))/ppdu;
+      const dy = (r*Math.sin(angle))/ppdu;
+      state.data.push(makeDataPoint(clamp01(xData+dx), clamp01(yData+dy), state.selectedClass));
+    }
+    resetForest();
+    updatePointCount();
+  }
+
+  canvas.addEventListener('pointerdown', (e) => {
+    try{ canvas.setPointerCapture(e.pointerId); }catch(err){}
+    const {x,y} = canvasPointFromEvent(e);
+    if(state.tool === 'pan'){
+      state.panning = true;
+      state.panStartClient = { x: e.clientX, y: e.clientY };
+      state.panStartView = { cx: state.view.cx, cy: state.view.cy };
+      canvas.style.cursor = 'grabbing';
+      return;
+    }
+    state.pointerPos = {x,y};
+    if(state.tool === 'add'){
+      state.painting = true;
+      state.lastStampPos = {x,y};
+      stampAdd(x,y);
+    } else if(state.tool === 'erase'){
+      state.erasing = true;
+      eraseAt(x,y);
+    }
+    redrawCanvas();
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if(state.tool === 'pan' && state.panning){
+      const rect = canvas.getBoundingClientRect();
+      const ppdu = pixelsPerDataUnit(rect.width);
+      const dxPix = e.clientX - state.panStartClient.x;
+      const dyPix = e.clientY - state.panStartClient.y;
+      state.view.cx = state.panStartView.cx - dxPix/ppdu;
+      state.view.cy = state.panStartView.cy - dyPix/ppdu;
+      clampView();
+      redrawCanvas();
+      return;
+    }
+    const {x,y} = canvasPointFromEvent(e);
+    state.pointerPos = {x,y};
+    if(state.tool === 'add' && state.painting){
+      const rect = canvas.getBoundingClientRect();
+      const ppdu = pixelsPerDataUnit(rect.width);
+      const last = state.lastStampPos;
+      const distPx = Math.hypot((x-last.x)*ppdu, (y-last.y)*ppdu);
+      if(distPx > state.addBrushSize*0.6){
+        stampAdd(x,y);
+        state.lastStampPos = {x,y};
+      }
+    } else if(state.tool === 'erase' && state.erasing){
+      eraseAt(x,y);
+    }
+    redrawCanvas();
+  });
+  canvas.addEventListener('pointerleave', () => {
+    state.pointerPos = null;
+    redrawCanvas();
+  });
+  window.addEventListener('pointerup', () => {
+    state.erasing = false;
+    state.painting = false;
+    if(state.panning){
+      state.panning = false;
+      canvas.style.cursor = state.tool === 'pan' ? 'grab' : 'crosshair';
+    }
+  });
+
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const px = e.clientX - rect.left, py = e.clientY - rect.top;
+    const factor = e.deltaY < 0 ? 1.15 : 1/1.15;
+    zoomBy(factor, {x: px, y: py});
+  }, { passive: false });
+
+  btnZoomIn.addEventListener('click', () => zoomBy(1.4));
+  btnZoomOut.addEventListener('click', () => zoomBy(1/1.4));
+  btnZoomReset.addEventListener('click', () => {
+    state.view.zoom = 1; state.view.cx = 0.5; state.view.cy = 0.5;
+    updateZoomBadge();
+    redrawCanvas();
+  });
+
+  canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if(state.data.length === 0) return;
+    const rect = canvas.getBoundingClientRect();
+    const ppdu = pixelsPerDataUnit(rect.width);
+    const {x,y} = canvasPointFromEvent(e);
+    let bestI = -1, bestD = Infinity;
+    state.data.forEach((p,i) => {
+      const dx = (p.x-x)*ppdu, dy = (p.y-y)*ppdu;
+      const d = dx*dx+dy*dy;
+      if(d < bestD){ bestD = d; bestI = i; }
+    });
+    if(bestI >= 0 && bestD < 30*30){
+      state.data.splice(bestI, 1);
+      resetForest();
+      updatePointCount();
+      redrawCanvas();
+    }
+  });
+
+  // ---------- Bootstrap matrix ----------
+  function renderBootstrapMatrix(counts, treeIndex){
+    if(!counts){
+      bmTitleText.textContent = '— no tree yet';
+      bmGrid.innerHTML = '';
+      return;
+    }
+    bmTitleText.textContent = `— Tree #${treeIndex} (dim = out-of-bag)`;
+    bmGrid.innerHTML = counts.map((c,i) => {
+      let bg;
+      if(c === 0) bg = 'var(--surface-3)';
+      else if(c === 1) bg = '#3987e566';
+      else if(c === 2) bg = '#3987e5aa';
+      else bg = '#3987e5';
+      return `<div class="bm-cell" style="background:${bg}" title="Point #${i} — sampled ${c}×"></div>`;
+    }).join('');
+  }
+
+  // ---------- Tree SVG ----------
+  function countLeaves(node){
+    return node.leaf ? 1 : countLeaves(node.left) + countLeaves(node.right);
+  }
+  function layout(node, depth, x0, x1, out){
+    if(node.leaf){
+      node._x = (x0+x1)/2; node._depth = depth;
+      out.push(node);
+      return;
+    }
+    const lc = countLeaves(node.left), rc = countLeaves(node.right);
+    const split = x0 + (x1-x0) * (lc/(lc+rc));
+    layout(node.left, depth+1, x0, split, out);
+    layout(node.right, depth+1, split, x1, out);
+    node._x = (node.left._x + node.right._x) / 2;
+    node._depth = depth;
+  }
+  function renderTreeSvg(root){
+    if(!root){
+      treeScroll.innerHTML = '<div class="tree-empty">Grow a tree to see its split structure here.</div>';
+      return;
+    }
+    const leaves = [];
+    layout(root, 0, 0, 1, leaves);
+    const nLeaves = leaves.length;
+    const nodeW = 116, nodeH = 50, vGap = 66, hPad = 40;
+    const width = Math.max(560, nLeaves * (nodeW + 14) + hPad*2);
+    const maxDepth = Math.max(...leaves.map(l => l._depth));
+    const height = (maxDepth+1) * vGap + nodeH + 30;
+
+    function px(nx){ return hPad + nx * (width - hPad*2); }
+    function py(depth){ return 20 + depth * vGap; }
+
+    let edges = '';
+    let boxes = '';
+
+    function draw(node){
+      const cx = px(node._x), cy = py(node._depth) + nodeH/2;
+      if(!node.leaf){
+        [node.left, node.right].forEach((child, idx) => {
+          const ccx = px(child._x), ccy = py(child._depth) + nodeH/2;
+          edges += `<line x1="${cx}" y1="${cy+nodeH/2}" x2="${ccx}" y2="${ccy-nodeH/2}" stroke="var(--border-strong)" stroke-width="1.5"/>`;
+          const mx = (cx+ccx)/2, my = (cy+nodeH/2+ccy-nodeH/2)/2;
+          edges += `<text x="${mx}" y="${my-4}" text-anchor="middle" font-size="10.5" fill="var(--ink-muted)" font-family="IBM Plex Mono, monospace">${idx===0 ? '≤' : '>'}</text>`;
+          draw(child);
+        });
+        boxes += `<g>
+          <title>Internal node: ${node.n} points, Gini = ${node.gini.toFixed(3)}. Splits on ${node.feat} ≤ ${node.th.toFixed(3)} — this threshold minimizes the weighted Gini impurity of the two children among every candidate threshold tried on this bootstrap sample.</title>
+          <rect x="${cx-nodeW/2}" y="${cy-nodeH/2}" width="${nodeW}" height="${nodeH}" rx="9" fill="var(--surface-3)" stroke="var(--border-strong)"/>
+          <text x="${cx}" y="${cy-6}" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)" font-family="IBM Plex Mono, monospace">${node.feat} ≤ ${node.th.toFixed(2)}</text>
+          <text x="${cx}" y="${cy+12}" text-anchor="middle" font-size="10" fill="var(--ink-muted)" font-family="IBM Plex Mono, monospace">n=${node.n} · G=${node.gini.toFixed(2)}</text>
+        </g>`;
+      } else {
+        const color = CLASS_COLORS[node.cls];
+        boxes += `<g>
+          <title>Leaf node: ${node.n} points reached here (Gini = ${node.gini.toFixed(3)}). The tree predicts Class ${CLASS_NAMES[node.cls]} — the majority class among those points.</title>
+          <rect x="${cx-nodeW/2}" y="${cy-nodeH/2}" width="${nodeW}" height="${nodeH}" rx="9" fill="${color}22" stroke="${color}" stroke-width="1.5"/>
+          <rect x="${cx-nodeW/2}" y="${cy-nodeH/2}" width="4" height="${nodeH}" fill="${color}"/>
+          <text x="${cx+4}" y="${cy-6}" text-anchor="middle" font-size="12" font-weight="700" fill="${color}" font-family="IBM Plex Mono, monospace">Class ${CLASS_NAMES[node.cls]}</text>
+          <text x="${cx+4}" y="${cy+12}" text-anchor="middle" font-size="10" fill="var(--ink-muted)" font-family="IBM Plex Mono, monospace">n=${node.n}</text>
+        </g>`;
+      }
+    }
+    draw(root);
+
+    treeScroll.innerHTML = `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">${edges}${boxes}</svg>`;
+  }
+
+  // ---------- Model panel orchestration (tree tabs + forest overview) ----------
+  function renderModelPanel(){
+    renderTreeTabs();
+    renderTreeDetail();
+    renderForestOverview();
+  }
+
+  function renderTreeTabs(){
+    if(state.trees.length === 0){ treeTabsEl.innerHTML = ''; return; }
+    treeTabsEl.innerHTML = state.trees.map((_, i) =>
+      `<button class="tree-tab ${i === state.selectedTreeIdx ? 'active' : ''}" data-idx="${i}" type="button">Tree ${i+1}</button>`
+    ).join('');
+  }
+  treeTabsEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('.tree-tab');
+    if(!btn) return;
+    state.selectedTreeIdx = +btn.dataset.idx;
+    renderTreeTabs();
+    renderTreeDetail();
+  });
+
+  function renderTreeDetail(){
+    if(state.selectedTreeIdx < 0 || !state.trees[state.selectedTreeIdx]){
+      renderBootstrapMatrix(null, 0);
+      renderTreeSvg(null);
+      return;
+    }
+    const meta = state.treeMeta[state.selectedTreeIdx];
+    renderBootstrapMatrix(meta.counts, state.selectedTreeIdx + 1);
+    renderTreeSvg(state.trees[state.selectedTreeIdx]);
+  }
+
+  function drawMiniBoundary(c, predictFn, W, H, gridN, small){
+    c.clearRect(0, 0, W, H);
+    const cw = W/gridN, ch = H/gridN;
+    for(let gy=0; gy<gridN; gy++){
+      for(let gx=0; gx<gridN; gx++){
+        const x = (gx+0.5)/gridN, y = (gy+0.5)/gridN;
+        const pred = predictFn(makeGridPoint(x,y));
+        c.fillStyle = CLASS_COLORS[pred];
+        c.globalAlpha = 0.55;
+        c.fillRect(gx*cw, gy*ch, cw+0.6, ch+0.6);
+      }
+    }
+    c.globalAlpha = 1;
+    const r = small ? 1.6 : 3;
+    for(const p of state.data){
+      c.beginPath();
+      c.arc(p.x*W, p.y*H, r, 0, Math.PI*2);
+      c.fillStyle = CLASS_COLORS[p.cls];
+      c.fill();
+      if(!small){ c.lineWidth = 1; c.strokeStyle = '#0b0b09'; c.stroke(); }
+    }
+  }
+
+  function renderForestOverview(){
+    const T = state.trees.length;
+    if(T === 0){
+      forestGrid.innerHTML = '<div class="tree-empty">Grow trees to see the forest overview.</div>';
+      finalTile.innerHTML = '';
+      return;
+    }
+    forestGrid.innerHTML = state.trees.map((t, i) =>
+      `<div class="forest-cell"><canvas data-idx="${i}" width="78" height="78"></canvas><span>Tree ${i+1}</span></div>`
+    ).join('');
+    forestGrid.querySelectorAll('canvas').forEach(cv => {
+      const i = +cv.dataset.idx;
+      drawMiniBoundary(cv.getContext('2d'), (pt) => predictTree(state.trees[i], pt), 78, 78, 14, true);
+    });
+    finalTile.innerHTML = `<canvas id="finalCanvas" width="190" height="190"></canvas><span>Majority Vote — Final Forest Prediction (T = ${T})</span>`;
+    const fc = document.getElementById('finalCanvas').getContext('2d');
+    drawMiniBoundary(fc, (pt) => ensemblePredict(pt, state.trees), 190, 190, 38, false);
+  }
+
+  document.querySelectorAll('.model-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.model-tab').forEach(b => b.classList.toggle('active', b === btn));
+      const tab = btn.dataset.tab;
+      modelDetailView.hidden = tab !== 'detail';
+      modelOverviewView.hidden = tab !== 'overview';
+    });
+  });
+
+  // ---------- Loss chart ----------
+  const PAD_L = 46, PAD_R = 16, PAD_T = 14, PAD_B = 30;
+  const VB_W = 640, VB_H = 260;
+  const PLOT_W = VB_W - PAD_L - PAD_R;
+  const PLOT_H = VB_H - PAD_T - PAD_B;
+
+  function xForT(t, nTrees){
+    const denom = Math.max(nTrees - 1, 1);
+    return PAD_L + ((t-1)/denom) * PLOT_W;
+  }
+  function yForErr(e){
+    return PAD_T + (1-e) * PLOT_H;
+  }
+
+  function renderLossChart(){
+    const params = getParams();
+    let grid = '';
+    const levels = [0, 0.25, 0.5, 0.75, 1];
+    levels.forEach(l => {
+      const y = yForErr(l);
+      grid += `<line x1="${PAD_L}" y1="${y}" x2="${VB_W-PAD_R}" y2="${y}" stroke="var(--grid-line)" stroke-dasharray="3 4"/>`;
+      grid += `<text x="${PAD_L-8}" y="${y+3}" text-anchor="end" font-size="9.5" fill="var(--ink-muted)" font-family="IBM Plex Mono, monospace">${Math.round(l*100)}%</text>`;
+    });
+    grid += `<line x1="${PAD_L}" y1="${VB_H-PAD_B}" x2="${VB_W-PAD_R}" y2="${VB_H-PAD_B}" stroke="var(--border-strong)"/>`;
+    grid += `<text x="${(PAD_L+VB_W-PAD_R)/2}" y="${VB_H-8}" text-anchor="middle" font-size="10" fill="var(--ink-muted)" font-family="IBM Plex Mono, monospace">Trees added →</text>`;
+
+    const oobPts = state.lossHistory.filter(h => h.oob !== null).map(h => [xForT(h.t, params.nTrees), yForErr(h.oob)]);
+    const trainPts = state.lossHistory.filter(h => h.train !== null).map(h => [xForT(h.t, params.nTrees), yForErr(h.train)]);
+
+    let areaPath = '';
+    if(oobPts.length > 0){
+      areaPath = `M${oobPts[0][0]},${VB_H-PAD_B} ` + oobPts.map(p => `L${p[0]},${p[1]}`).join(' ') + ` L${oobPts[oobPts.length-1][0]},${VB_H-PAD_B} Z`;
+    }
+    const oobLine = oobPts.map((p,i) => (i===0?'M':'L') + p[0] + ',' + p[1]).join(' ');
+    const trainLine = trainPts.map((p,i) => (i===0?'M':'L') + p[0] + ',' + p[1]).join(' ');
+
+    const oobDots = oobPts.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="2.6" fill="var(--series-a)"/>`).join('');
+
+    let svg = `
+      ${grid}
+      ${areaPath ? `<path d="${areaPath}" fill="var(--series-a)" opacity="0.10"/>` : ''}
+      ${trainLine ? `<path d="${trainLine}" fill="none" stroke="var(--ink-muted)" stroke-width="2" stroke-dasharray="5 3" vector-effect="non-scaling-stroke"/>` : ''}
+      ${oobLine ? `<path d="${oobLine}" fill="none" stroke="var(--series-a)" stroke-width="2.4" vector-effect="non-scaling-stroke"/>` : ''}
+      ${oobDots}
+      <line id="hoverLine" x1="0" y1="${PAD_T}" x2="0" y2="${VB_H-PAD_B}" stroke="var(--ink-dim)" stroke-width="1" opacity="0"/>
+    `;
+    if(state.lossHistory.length === 0){
+      svg += `<text x="${VB_W/2}" y="${VB_H/2}" text-anchor="middle" font-size="13" fill="var(--ink-muted)">No trees grown yet</text>`;
+    }
+    lossSvg.innerHTML = svg;
+  }
+
+  lossSvg.addEventListener('mousemove', (e) => {
+    if(state.lossHistory.length === 0) return;
+    const params = getParams();
+    const rect = lossSvg.getBoundingClientRect();
+    const relX = (e.clientX - rect.left) / rect.width * VB_W;
+    let best = state.lossHistory[0], bestD = Infinity;
+    for(const h of state.lossHistory){
+      const d = Math.abs(xForT(h.t, params.nTrees) - relX);
+      if(d < bestD){ bestD = d; best = h; }
+    }
+    const hoverLine = lossSvg.querySelector('#hoverLine');
+    const hx = xForT(best.t, params.nTrees);
+    if(hoverLine){ hoverLine.setAttribute('x1', hx); hoverLine.setAttribute('x2', hx); hoverLine.setAttribute('opacity', 0.5); }
+
+    const wrapRect = chartWrap.getBoundingClientRect();
+    const screenX = rect.left + (hx/VB_W)*rect.width - wrapRect.left;
+    const screenY = rect.top + (yForErr(best.oob !== null ? best.oob : 0.5)/VB_H)*rect.height - wrapRect.top;
+    chartTooltip.hidden = false;
+    chartTooltip.style.left = screenX + 'px';
+    chartTooltip.style.top = screenY + 'px';
+    chartTooltip.innerHTML = `Tree <b>#${best.t}</b><br>OOB: <b>${best.oob!==null ? (best.oob*100).toFixed(1)+'%' : '—'}</b><br>Train: <b>${best.train!==null ? (best.train*100).toFixed(1)+'%' : '—'}</b>`;
+  });
+  lossSvg.addEventListener('mouseleave', () => {
+    chartTooltip.hidden = true;
+    const hoverLine = lossSvg.querySelector('#hoverLine');
+    if(hoverLine) hoverLine.setAttribute('opacity', 0);
+  });
+
+  // ---------- Wiring ----------
+  document.querySelectorAll('.swatch').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.swatch').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.selectedClass = +btn.dataset.cls;
+    });
+  });
+
+  function setCountMode(mode){
+    state.countMode = mode;
+    btnModeTotal.classList.toggle('active', mode === 'total');
+    btnModePerClass.classList.toggle('active', mode === 'perclass');
+    totalModeFields.hidden = mode !== 'total';
+    perClassModeFields.hidden = mode !== 'perclass';
+    validateCounts();
+  }
+  btnModeTotal.addEventListener('click', () => setCountMode('total'));
+  btnModePerClass.addEventListener('click', () => setCountMode('perclass'));
+
+  function showCountError(msg, badInputs){
+    countError.textContent = msg;
+    countError.hidden = !msg;
+    [inTotalN, inCountA, inCountB, inCountC].forEach(el => el.classList.remove('has-error'));
+    (badInputs || []).forEach(el => el.classList.add('has-error'));
+  }
+
+  function validateCounts(){
+    if(state.countMode === 'total'){
+      const raw = inTotalN.value;
+      const n = Number(raw);
+      const isWhole = raw !== '' && Number.isFinite(n) && Number.isInteger(n);
+      if(!isWhole){
+        showCountError('N must be a whole number.', [inTotalN]);
+        return null;
+      }
+      if(n < 3){
+        showCountError(`N must be at least 3 (currently ${n}).`, [inTotalN]);
+        return null;
+      }
+      if(n > 300){
+        showCountError(`N must be at most 300 (currently ${n}).`, [inTotalN]);
+        return null;
+      }
+      showCountError('');
+      return { mode: 'total', total: n };
+    }
+
+    const fields = [inCountA, inCountB, inCountC];
+    const vals = fields.map(f => Number(f.value));
+    const badFields = fields.filter((f,i) => f.value === '' || !Number.isFinite(vals[i]) || !Number.isInteger(vals[i]) || vals[i] < 0 || vals[i] > 200);
+    if(badFields.length > 0){
+      showCountError('Each class count must be a whole number from 0 to 200.', badFields);
+      return null;
+    }
+    const total = vals.reduce((a,b) => a+b, 0);
+    if(total < 3){
+      showCountError(`Class counts must add up to at least 3 (currently ${total}).`, fields);
+      return null;
+    }
+    if(total > 300){
+      showCountError(`Class counts must add up to at most 300 (currently ${total}).`, fields);
+      return null;
+    }
+    showCountError('');
+    return { mode: 'perclass', counts: vals };
+  }
+  [inTotalN, inCountA, inCountB, inCountC].forEach(el => el.addEventListener('input', validateCounts));
+
+  btnAddRandom.addEventListener('click', () => {
+    const result = validateCounts();
+    if(!result) return;
+    const newPts = result.mode === 'total' ? generateRandomData(result.total) : generateRandomDataByClass(result.counts);
+    state.data = state.data.concat(newPts);
+    resetForest();
+    updatePointCount();
+    redrawCanvas();
+  });
+  btnClearPts.addEventListener('click', () => setData([]));
+  btnStep.addEventListener('click', () => { if(!state.playing) doStep(); });
+  btnPlay.addEventListener('click', () => { state.playing ? stopPlaying() : startPlaying(); });
+  btnReset.addEventListener('click', resetForest);
+
+  function setTool(tool){
+    state.tool = tool;
+    btnToolAdd.classList.toggle('active', tool === 'add');
+    btnToolErase.classList.toggle('active', tool === 'erase');
+    btnToolPan.classList.toggle('active', tool === 'pan');
+    addOptions.hidden = tool !== 'add';
+    eraseOptions.hidden = tool !== 'erase';
+    canvas.style.cursor = tool === 'pan' ? 'grab' : 'crosshair';
+    redrawCanvas();
+  }
+  btnToolAdd.addEventListener('click', () => setTool('add'));
+  btnToolErase.addEventListener('click', () => setTool('erase'));
+  btnToolPan.addEventListener('click', () => setTool('pan'));
+
+  inEraserSize.addEventListener('input', () => {
+    state.eraserSize = +inEraserSize.value;
+    valEraserSize.textContent = state.eraserSize + 'px';
+    redrawCanvas();
+  });
+
+  btnAddManual.addEventListener('click', () => {
+    const x = clamp01(Math.min(100, Math.max(0, +inManualX.value)) / 100);
+    const y = clamp01(Math.min(100, Math.max(0, +inManualY.value)) / 100);
+    state.data.push(makeDataPoint(x, y, state.selectedClass));
+    resetForest();
+    updatePointCount();
+    redrawCanvas();
+  });
+
+  inAddBrushSize.addEventListener('input', () => {
+    state.addBrushSize = +inAddBrushSize.value;
+    valAddBrushSize.textContent = state.addBrushSize + 'px';
+    redrawCanvas();
+  });
+  inAddDensity.addEventListener('input', () => {
+    state.addDensity = +inAddDensity.value;
+    valAddDensity.textContent = state.addDensity;
+  });
+
+  inNumFeatures.addEventListener('input', () => {
+    valNumFeatures.textContent = getFeatureKeys(+inNumFeatures.value).join(', ');
+  });
+  inNumFeatures.addEventListener('change', () => {
+    syncFeatureCount();
+    resetForest();
+  });
+
+  function bindSlider(input, label, formatter){
+    input.addEventListener('input', () => { label.textContent = formatter(+input.value); });
+    input.addEventListener('change', resetForest);
+  }
+  bindSlider(inNTrees, valNTrees, v => v);
+  bindSlider(inMaxDepth, valMaxDepth, v => v);
+  bindSlider(inMinSamples, valMinSamples, v => v);
+  bindSlider(inBootstrap, valBootstrap, v => Math.round(v*100) + '%');
+  inFeatRandom.addEventListener('change', resetForest);
+
+  window.addEventListener('resize', () => { resizeCanvas(); redrawCanvas(); });
+  new ResizeObserver(() => { resizeCanvas(); redrawCanvas(); }).observe(canvas.parentElement);
+
+  // ---------- Init ----------
+  resizeCanvas();
+  updateZoomBadge();
+  validateCounts();
+  valNumFeatures.textContent = getFeatureKeys(+inNumFeatures.value).join(', ');
+  setData(generateRandomData(+inTotalN.value));
+  renderLossChart();
+})();
+</script>
+</body>
+</html>
