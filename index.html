@@ -59,10 +59,10 @@
 
   /* ---------- Header ---------- */
   .site-header{
-    padding: 30px 34px 22px;
+    padding: 20px 34px 14px;
     display:flex;
     flex-direction:column;
-    gap:8px;
+    gap:6px;
     border-bottom: 1px solid var(--border);
     flex: 0 0 auto;
   }
@@ -89,14 +89,15 @@
     display:grid;
     grid-template-columns: 1fr 1fr;
     gap: 22px;
-    padding: 22px 34px;
+    padding: 16px 34px 18px;
   }
   .column{
     min-height:0;
     overflow-y: auto;
+    overflow-x: hidden;
     display:flex;
     flex-direction:column;
-    gap: 22px;
+    gap: 14px;
     padding-right: 6px;
     scrollbar-width: thin;
     scrollbar-color: var(--border-strong) transparent;
@@ -110,12 +111,23 @@
     border: 1px solid var(--border);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
-    padding: 20px 22px 22px;
+    padding: 16px 20px 18px;
     flex: 0 0 auto;
   }
-  .panel-head{ display:flex; flex-direction:column; gap:5px; margin-bottom:16px; }
+  .panel-head{ display:flex; flex-direction:column; gap:4px; margin-bottom:12px; }
   .panel-head h2{ font-size: 18px; }
   .panel-hint{ font-size: 12.5px; color: var(--ink-muted); line-height:1.5; }
+
+  /* ---------- Collapsible explanations ---------- */
+  .explain-toggle{
+    background:none; border:none; padding:0; margin-top:4px; display:inline-block;
+    font-size:11.5px; font-weight:700; color: var(--accent-strong); cursor:pointer;
+    font-family:"Manrope",sans-serif;
+  }
+  .explain-toggle:hover{ text-decoration:underline; }
+  .explain-toggle.indent{ margin-left:24px; margin-top:2px; }
+  .check-row-wrap{ margin: 10px 0 12px; }
+  .check-row-wrap .check-row{ margin:0; }
 
   /* ---------- Buttons & inputs ---------- */
   .btn{
@@ -150,7 +162,7 @@
   .info-tip.term{ border-bottom:1px dashed var(--ink-muted); }
   .info-tip .tip-bubble{
     position:absolute; bottom:130%; left:50%; transform:translateX(-50%);
-    width:250px; max-width:64vw; background: rgba(14,14,11,0.97); border:1px solid var(--border-strong);
+    width:220px; max-width:min(220px, 60vw); background: rgba(14,14,11,0.97); border:1px solid var(--border-strong);
     border-radius:10px; padding:10px 12px; font-size:11.5px; line-height:1.55; color: var(--ink-dim);
     box-shadow: var(--shadow); opacity:0; pointer-events:none; transition: opacity .12s ease; z-index:30;
     text-align:left; font-weight:400; font-family:"Manrope",sans-serif;
@@ -160,7 +172,7 @@
   /* ---------- Data panel ---------- */
   .canvas-toolbar{
     display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between;
-    gap: 10px; margin-bottom: 12px;
+    gap: 10px; margin-bottom: 8px;
   }
   .class-picker, .tool-picker{ display:flex; gap:6px; }
   .swatch, .tool-btn{
@@ -181,7 +193,7 @@
   .swatch-c.active{ color: var(--series-c); }
   .tool-btn.active{ background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 
-  .tool-options{ margin-bottom: 12px; }
+  .tool-options{ margin-bottom: 8px; }
   .inline-field{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12.5px; color: var(--ink-dim); }
   .inline-field label{ font-weight:600; color: var(--ink); }
   .inline-field input[type="number"]{
@@ -190,8 +202,8 @@
   }
   .inline-field input[type="range"]{ flex:1; min-width:110px; }
   .batch-row{
-    display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;
-    font-size:12.5px; color: var(--ink-dim); padding-top:12px; border-top:1px dashed var(--border);
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;
+    font-size:12.5px; color: var(--ink-dim); padding-top:8px; border-top:1px dashed var(--border);
   }
   .batch-row label{ font-weight:600; color: var(--ink); }
   .mode-toggle{ display:flex; gap:6px; }
@@ -211,9 +223,12 @@
     color: var(--ink); padding:6px 6px; font-family:"IBM Plex Mono",monospace; font-size:12.5px; text-align:center;
   }
   .count-field input.has-error{ border-color: var(--error); box-shadow: 0 0 0 1px var(--error); }
-  .count-error-text{ font-size:11.5px; color: var(--error); line-height:1.5; margin: 0 0 14px; }
+  .count-error-text{ font-size:11.5px; color: var(--error); line-height:1.5; margin: 0 0 10px; }
 
-  .canvas-wrap{ position:relative; width:100%; aspect-ratio: 1/1; border-radius: 12px; overflow:hidden; border:1px solid var(--border-strong); background: #0e0e0b; }
+  .canvas-wrap{
+    position:relative; width:100%; max-width:520px; margin:0 auto; aspect-ratio: 1/1;
+    border-radius: 12px; overflow:hidden; border:1px solid var(--border-strong); background: #0e0e0b;
+  }
   .canvas-wrap canvas{ display:block; width:100%; height:100%; cursor: crosshair; touch-action:none; }
   .canvas-badge{
     position:absolute; top:10px; right:10px; background: rgba(11,11,9,0.72);
@@ -229,10 +244,10 @@
     line-height:1;
   }
   .zoom-btn:hover{ border-color: var(--accent); color: var(--accent-strong); }
-  .axis-caption{ margin-top:10px; font-size:12px; color: var(--ink-muted); line-height:1.5; }
+  .axis-caption{ margin-top:8px; font-size:12px; color: var(--ink-muted); line-height:1.5; }
 
   /* ---------- Controls panel ---------- */
-  .slider-row{ margin-bottom: 15px; }
+  .slider-row{ margin-bottom: 11px; }
   .slider-row .row-top{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
   .slider-row label{ font-size:13px; font-weight:600; color: var(--ink); }
   .slider-row .value{ font-size:13px; color: var(--accent-strong); font-weight:600; font-variant-numeric: tabular-nums; }
@@ -248,11 +263,12 @@
   input[type="range"]::-moz-range-thumb{
     width:14px; height:14px; border-radius:50%; background: var(--accent); border:2px solid var(--accent-ink); cursor:pointer;
   }
-  .check-row{ display:flex; gap:9px; align-items:flex-start; font-size:12.5px; color: var(--ink-dim); line-height:1.5; margin: 14px 0 18px; cursor:pointer; }
+  .check-row{ display:flex; gap:9px; align-items:flex-start; font-size:12.5px; color: var(--ink-dim); line-height:1.5; margin: 10px 0 12px; cursor:pointer; }
   .check-row input{ margin-top:2px; accent-color: var(--accent); width:15px; height:15px; flex:0 0 auto; }
-  .control-buttons{ display:flex; flex-wrap:wrap; gap:9px; margin-bottom: 14px; }
+  .check-summary{ display:block; }
+  .control-buttons{ display:flex; flex-wrap:wrap; gap:9px; margin-bottom: 10px; }
   .status-line{
-    font-size:12.5px; color: var(--ink-muted); padding-top:12px; border-top: 1px dashed var(--border);
+    font-size:12.5px; color: var(--ink-muted); padding-top:8px; border-top: 1px dashed var(--border);
     line-height:1.5; min-height: 1.5em;
   }
   .status-line b{ color: var(--ink); }
@@ -348,7 +364,8 @@
   <header class="site-header">
     <p class="eyebrow">Interactive Machine Learning Visualization</p>
     <h1>Random Forest, Step by Step</h1>
-    <p class="lede">A random forest grows many decision trees, each on a <strong>bootstrap-resampled</strong> copy of the data, and lets every split consider only a <strong>random subset of features</strong>. Averaging their votes turns a flock of overfit, high-variance trees into one stable predictor.</p>
+    <p class="lede" id="ledeMore" hidden>A random forest grows many decision trees, each on a <strong>bootstrap-resampled</strong> copy of the data, and lets every split consider only a <strong>random subset of features</strong>. Averaging their votes turns a flock of overfit, high-variance trees into one stable predictor.</p>
+    <button class="explain-toggle" type="button" data-target="ledeMore">Show more</button>
   </header>
 
   <main class="workspace">
@@ -357,7 +374,8 @@
       <article class="panel" id="panel-data">
         <div class="panel-head">
           <h2>Data Canvas</h2>
-          <p class="panel-hint">Pick a tool below: <b>Add</b> paints points inside a brush circle; <b>Erase</b> drags to wipe points; <b>Pan</b> drags the view. Scroll (or the +/− buttons) zooms in and out.</p>
+          <p class="panel-hint">Pick a tool below: <b>Add</b> paints points; <b>Erase</b> wipes them; <b>Pan</b> drags the view.<span class="explain-more" id="dataToolsMore" hidden> Add paints points inside a brush circle; Erase drags to wipe points inside its own circle; Pan drags the whole view around. Scroll (or the +/− buttons) zooms in and out.</span></p>
+          <button class="explain-toggle" type="button" data-target="dataToolsMore">Show more</button>
         </div>
         <div class="canvas-toolbar">
           <div class="class-picker" role="group" aria-label="Point class">
@@ -387,9 +405,9 @@
           </div>
           <div class="inline-field">
             <label for="inManualX">x</label>
-            <input type="number" id="inManualX" min="0" max="100" value="50" step="1">
+            <input type="number" id="inManualX" value="50" step="1">
             <label for="inManualY">y</label>
-            <input type="number" id="inManualY" min="0" max="100" value="50" step="1">
+            <input type="number" id="inManualY" value="50" step="1">
             <button id="btnAddManual" class="btn btn-ghost" type="button">Add Point at (x, y)</button>
             <span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Type exact Feature₁ (x) / Feature₂ (y) values on a 0–100 scale for the selected class, instead of painting freehand — useful for placing a single point precisely.</span></span>
           </div>
@@ -429,7 +447,7 @@
           <div class="canvas-zoom-controls">
             <button class="zoom-btn" id="btnZoomIn" type="button" title="Zoom in">+</button>
             <button class="zoom-btn" id="btnZoomOut" type="button" title="Zoom out">−</button>
-            <button class="zoom-btn" id="btnZoomReset" type="button" title="Reset view">⤢</button>
+            <button class="zoom-btn" id="btnZoomReset" type="button" title="Fit view to all data">⤢</button>
           </div>
         </div>
         <p class="axis-caption"><b>x</b> = Feature₁ &nbsp;·&nbsp; <b>y</b> = Feature₂ — shaded regions show the current ensemble's decision boundary, recomputed after every tree. <span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Every pixel is run through all trees built so far; each tree casts one vote for a class, and the pixel is shaded with whichever class wins the most votes.</span></span></p>
@@ -462,10 +480,13 @@
           <input type="range" id="inBootstrap" min="0.4" max="1" value="1" step="0.05">
         </div>
 
-        <label class="check-row">
-          <input type="checkbox" id="inFeatRandom" checked>
-          <span>Random feature subspace at each split — consider only a random subset of size <b class="mono">⌈√F⌉</b> features per node (F = Number of Features above). This is the "random" in Random Forest; unchecking it degrades the ensemble to plain bagging (every split sees all F features).</span>
-        </label>
+        <div class="check-row-wrap">
+          <label class="check-row">
+            <input type="checkbox" id="inFeatRandom" checked>
+            <span>Random feature subspace at each split — a random subset of size <b class="mono">⌈√F⌉</b> features per node.<span class="explain-more" id="featRandomMore" hidden> F is the Number of Features set above. This is the "random" in Random Forest; unchecking it degrades the ensemble to plain bagging, where every split sees all F features instead.</span></span>
+          </label>
+          <button class="explain-toggle indent" type="button" data-target="featRandomMore">Show more</button>
+        </div>
 
         <div class="control-buttons">
           <button id="btnStep" class="btn btn-primary" type="button">Step ▸ Grow One Tree</button>
@@ -509,7 +530,8 @@
         </div>
 
         <div id="modelOverviewView" hidden>
-          <p class="panel-hint" style="margin-bottom:14px;">Each tile is one tree's own decision boundary, trained on only its own bootstrap sample. The highlighted tile combines all of them by majority vote — the forest's actual output, identical to the boundary shown on the Data Canvas.</p>
+          <p class="panel-hint" style="margin-bottom:6px;">Each tile is one tree's own decision boundary.<span class="explain-more" id="forestOverviewMore" hidden> Trained on only its own bootstrap sample. The highlighted tile combines all of them by majority vote — the forest's actual output, identical to the boundary shown on the Data Canvas.</span></p>
+          <button class="explain-toggle" type="button" data-target="forestOverviewMore" style="margin-bottom:12px;">Show more</button>
           <div class="forest-grid" id="forestGrid"></div>
           <div class="final-tile" id="finalTile"></div>
         </div>
@@ -879,7 +901,7 @@
     const oobErr = computeOobError();
     state.lossHistory.push({ t: state.trees.length, train: trainErr, oob: oobErr });
 
-    updateBoundaryCache();
+    bumpModelVersion();
     redrawCanvas();
     renderModelPanel();
     renderLossChart();
@@ -932,7 +954,7 @@
     state.selectedTreeIdx = -1;
     state.lossHistory = [];
     state.oobVotes = state.data.map(() => [0,0,0]);
-    updateBoundaryCache();
+    bumpModelVersion();
     redrawCanvas();
     renderModelPanel();
     renderLossChart();
@@ -974,15 +996,26 @@
   boundaryCanvas.width = GRID_N; boundaryCanvas.height = GRID_N;
   const bctx = boundaryCanvas.getContext('2d');
   let hasBoundary = false;
+  let modelVersion = 0;
+  let lastBoundaryKey = null;
 
-  function updateBoundaryCache(){
+  function bumpModelVersion(){ modelVersion++; }
+
+  // Recomputes the decision-boundary heatmap for whatever data range is
+  // currently visible (not a fixed [0,1] square), so it follows pan/zoom —
+  // every point, anywhere on the infinite canvas, is reflected in the coloring.
+  function computeBoundaryRasterIfNeeded(){
     if(state.trees.length === 0){ hasBoundary = false; return; }
     hasBoundary = true;
+    const b = getViewBounds();
+    const key = modelVersion + ':' + b.minX.toFixed(6) + ',' + b.maxX.toFixed(6) + ',' + b.minY.toFixed(6) + ',' + b.maxY.toFixed(6);
+    if(key === lastBoundaryKey) return;
+    lastBoundaryKey = key;
     const img = bctx.createImageData(GRID_N, GRID_N);
     for(let gy=0; gy<GRID_N; gy++){
       for(let gx=0; gx<GRID_N; gx++){
-        const x = (gx + 0.5) / GRID_N;
-        const y = (gy + 0.5) / GRID_N;
+        const x = b.minX + (gx + 0.5) / GRID_N * (b.maxX - b.minX);
+        const y = b.minY + (gy + 0.5) / GRID_N * (b.maxY - b.minY);
         const pred = ensemblePredict(makeGridPoint(x,y), state.trees);
         const c = RGB_COLORS[pred];
         const idx = (gy*GRID_N + gx) * 4;
@@ -1018,10 +1051,6 @@
       y: b.minY + (py / H) * (b.maxY - b.minY)
     };
   }
-  function clampView(){
-    state.view.cx = Math.min(1, Math.max(0, state.view.cx));
-    state.view.cy = Math.min(1, Math.max(0, state.view.cy));
-  }
   function updateZoomBadge(){
     zoomBadge.textContent = state.view.zoom.toFixed(1) + '×';
   }
@@ -1034,7 +1063,6 @@
     const half = 0.5 / state.view.zoom;
     state.view.cx = before.x - ((2*px/rect.width) - 1) * half;
     state.view.cy = before.y - ((2*py/rect.height) - 1) * half;
-    clampView();
     updateZoomBadge();
     redrawCanvas();
   }
@@ -1045,22 +1073,26 @@
     ctx.clearRect(0, 0, W, H);
     const b = getViewBounds();
 
-    if(hasBoundary){
-      ctx.imageSmoothingEnabled = false;
-      const srcX = b.minX*GRID_N, srcY = b.minY*GRID_N;
-      const srcW = (b.maxX-b.minX)*GRID_N, srcH = (b.maxY-b.minY)*GRID_N;
-      ctx.drawImage(boundaryCanvas, srcX, srcY, srcW, srcH, 0, 0, W, H);
-      ctx.imageSmoothingEnabled = true;
-    }
-
-    // grid lines at data fractions 0, 0.1, ... 1
-    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    // infinite minor grid — tiles every 0.1 data unit across whatever is visible,
+    // so panning/zooming out reveals an endless plane rather than empty void
+    ctx.strokeStyle = 'rgba(255,255,255,0.045)';
     ctx.lineWidth = 1;
-    for(let i=0;i<=10;i++){
+    const iMinX = Math.floor(b.minX*10)-1, iMaxX = Math.ceil(b.maxX*10)+1;
+    const iMinY = Math.floor(b.minY*10)-1, iMaxY = Math.ceil(b.maxY*10)+1;
+    for(let i=iMinX; i<=iMaxX; i++){
       const gx = dataToPixel(i/10, 0, W, H).x;
       ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,H); ctx.stroke();
+    }
+    for(let i=iMinY; i<=iMaxY; i++){
       const gy = dataToPixel(0, i/10, W, H).y;
       ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(W,gy); ctx.stroke();
+    }
+
+    computeBoundaryRasterIfNeeded();
+    if(hasBoundary){
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(boundaryCanvas, 0, 0, GRID_N, GRID_N, 0, 0, W, H);
+      ctx.imageSmoothingEnabled = true;
     }
 
     // points
@@ -1127,7 +1159,7 @@
       const r = state.addBrushSize*Math.sqrt(Math.random());
       const dx = (r*Math.cos(angle))/ppdu;
       const dy = (r*Math.sin(angle))/ppdu;
-      state.data.push(makeDataPoint(clamp01(xData+dx), clamp01(yData+dy), state.selectedClass));
+      state.data.push(makeDataPoint(xData+dx, yData+dy, state.selectedClass));
     }
     resetForest();
     updatePointCount();
@@ -1162,7 +1194,6 @@
       const dyPix = e.clientY - state.panStartClient.y;
       state.view.cx = state.panStartView.cx - dxPix/ppdu;
       state.view.cy = state.panStartView.cy - dyPix/ppdu;
-      clampView();
       redrawCanvas();
       return;
     }
@@ -1205,11 +1236,35 @@
 
   btnZoomIn.addEventListener('click', () => zoomBy(1.4));
   btnZoomOut.addEventListener('click', () => zoomBy(1/1.4));
-  btnZoomReset.addEventListener('click', () => {
-    state.view.zoom = 1; state.view.cx = 0.5; state.view.cy = 0.5;
+
+  // Square bounding box (with padding) around every current point, falling back
+  // to the classic [0,1] domain when there's no data outside it — shared by the
+  // main canvas view-fit and the Forest Overview thumbnails so both agree on
+  // what "the whole dataset" looks like.
+  function computeDataBounds(){
+    let minX = 0, maxX = 1, minY = 0, maxY = 1;
+    for(const p of state.data){
+      if(p.x < minX) minX = p.x;
+      if(p.x > maxX) maxX = p.x;
+      if(p.y < minY) minY = p.y;
+      if(p.y > maxY) maxY = p.y;
+    }
+    const span = Math.max(maxX-minX, maxY-minY) * 1.2 || 1;
+    const cx = (minX+maxX)/2, cy = (minY+maxY)/2;
+    return { minX: cx-span/2, maxX: cx+span/2, minY: cy-span/2, maxY: cy+span/2 };
+  }
+
+  // Frames every current point (including ones outside the original [0,1] domain)
+  // instead of always snapping back to a hardcoded 0-100 view.
+  function fitViewToData(){
+    const b = computeDataBounds();
+    state.view.cx = (b.minX+b.maxX)/2;
+    state.view.cy = (b.minY+b.maxY)/2;
+    state.view.zoom = Math.min(10, Math.max(0.2, 1/(b.maxX-b.minX)));
     updateZoomBadge();
     redrawCanvas();
-  });
+  }
+  btnZoomReset.addEventListener('click', fitViewToData);
 
   canvas.addEventListener('contextmenu', (e) => {
     e.preventDefault();
@@ -1349,12 +1404,13 @@
     renderTreeSvg(state.trees[state.selectedTreeIdx]);
   }
 
-  function drawMiniBoundary(c, predictFn, W, H, gridN, small){
+  function drawMiniBoundary(c, predictFn, W, H, gridN, small, b){
     c.clearRect(0, 0, W, H);
     const cw = W/gridN, ch = H/gridN;
     for(let gy=0; gy<gridN; gy++){
       for(let gx=0; gx<gridN; gx++){
-        const x = (gx+0.5)/gridN, y = (gy+0.5)/gridN;
+        const x = b.minX + (gx+0.5)/gridN*(b.maxX-b.minX);
+        const y = b.minY + (gy+0.5)/gridN*(b.maxY-b.minY);
         const pred = predictFn(makeGridPoint(x,y));
         c.fillStyle = CLASS_COLORS[pred];
         c.globalAlpha = 0.55;
@@ -1364,8 +1420,10 @@
     c.globalAlpha = 1;
     const r = small ? 1.6 : 3;
     for(const p of state.data){
+      const px = (p.x-b.minX)/(b.maxX-b.minX)*W;
+      const py = (p.y-b.minY)/(b.maxY-b.minY)*H;
       c.beginPath();
-      c.arc(p.x*W, p.y*H, r, 0, Math.PI*2);
+      c.arc(px, py, r, 0, Math.PI*2);
       c.fillStyle = CLASS_COLORS[p.cls];
       c.fill();
       if(!small){ c.lineWidth = 1; c.strokeStyle = '#0b0b09'; c.stroke(); }
@@ -1379,16 +1437,17 @@
       finalTile.innerHTML = '';
       return;
     }
+    const bounds = computeDataBounds();
     forestGrid.innerHTML = state.trees.map((t, i) =>
       `<div class="forest-cell"><canvas data-idx="${i}" width="78" height="78"></canvas><span>Tree ${i+1}</span></div>`
     ).join('');
     forestGrid.querySelectorAll('canvas').forEach(cv => {
       const i = +cv.dataset.idx;
-      drawMiniBoundary(cv.getContext('2d'), (pt) => predictTree(state.trees[i], pt), 78, 78, 14, true);
+      drawMiniBoundary(cv.getContext('2d'), (pt) => predictTree(state.trees[i], pt), 78, 78, 14, true, bounds);
     });
     finalTile.innerHTML = `<canvas id="finalCanvas" width="190" height="190"></canvas><span>Majority Vote — Final Forest Prediction (T = ${T})</span>`;
     const fc = document.getElementById('finalCanvas').getContext('2d');
-    drawMiniBoundary(fc, (pt) => ensemblePredict(pt, state.trees), 190, 190, 38, false);
+    drawMiniBoundary(fc, (pt) => ensemblePredict(pt, state.trees), 190, 190, 38, false, bounds);
   }
 
   document.querySelectorAll('.model-tab').forEach(btn => {
@@ -1481,6 +1540,15 @@
   });
 
   // ---------- Wiring ----------
+  document.querySelectorAll('.explain-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = document.getElementById(btn.dataset.target);
+      if(!target) return;
+      target.hidden = !target.hidden;
+      btn.textContent = target.hidden ? 'Show more' : 'Show less';
+    });
+  });
+
   document.querySelectorAll('.swatch').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.swatch').forEach(b => b.classList.remove('active'));
@@ -1556,7 +1624,7 @@
     state.data = state.data.concat(newPts);
     resetForest();
     updatePointCount();
-    redrawCanvas();
+    fitViewToData();
   });
   btnClearPts.addEventListener('click', () => setData([]));
   btnStep.addEventListener('click', () => { if(!state.playing) doStep(); });
@@ -1584,12 +1652,12 @@
   });
 
   btnAddManual.addEventListener('click', () => {
-    const x = clamp01(Math.min(100, Math.max(0, +inManualX.value)) / 100);
-    const y = clamp01(Math.min(100, Math.max(0, +inManualY.value)) / 100);
+    const x = (+inManualX.value || 0) / 100;
+    const y = (+inManualY.value || 0) / 100;
     state.data.push(makeDataPoint(x, y, state.selectedClass));
     resetForest();
     updatePointCount();
-    redrawCanvas();
+    fitViewToData();
   });
 
   inAddBrushSize.addEventListener('input', () => {
