@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-10T00:00:00Z",
+  "title": "Design System: Random Forest Lab",
+  "extensions": {
+    "colorMeta": {
+      "void-black": {
+        "role": "neutral",
+        "displayName": "Void Black",
+        "canonical": "#070706",
+        "tonalRamp": [
+          "#0b0b09",
+          "#151511",
+          "#1c1c17",
+          "#22221b",
+          "#2b2b24",
+          "#5c5a4f",
+          "#8a8778",
+          "#c3c0b2"
+        ]
+      },
+      "gold": {
+        "role": "secondary",
+        "displayName": "Credit Gold",
+        "canonical": "#d99b3f",
+        "tonalRamp": [
+          "#2e1f08",
+          "#5a3d12",
+          "#8a5e1e",
+          "#b27b2c",
+          "#d99b3f",
+          "#e5b366",
+          "#f0cd96",
+          "#f9e8cc"
+        ]
+      },
+      "chalk": {
+        "role": "primary",
+        "displayName": "Chalk",
+        "canonical": "#ece8db",
+        "tonalRamp": [
+          "#0b0b09",
+          "#2b2a25",
+          "#4c4a42",
+          "#77746a",
+          "#a39f92",
+          "#ece8db",
+          "#f6f3ea",
+          "#fffdf5"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page title only."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Panel titles."
+      },
+      "data": {
+        "displayName": "Data",
+        "purpose": "All measured numbers, tabular."
+      }
+    },
+    "shadows": [
+      {
+        "name": "panel-lift",
+        "value": "0 18px 40px -18px rgba(0,0,0,0.65), 0 2px 10px -2px rgba(0,0,0,0.45)",
+        "purpose": "Floating panels and tooltips."
+      }
+    ],
+    "motion": [
+      {
+        "name": "control-lift",
+        "value": ".12s ease",
+        "purpose": "Button hover rise and tooltip fade."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "stack",
+        "value": "900px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main action in a panel (Step, Play).",
+      "html": "<button class=\"ds-btn-primary\">Step</button>",
+      "css": ".ds-btn-primary{font:700 13px IBM Plex Sans Thai,sans-serif;padding:9px 15px;border-radius:10px;border:1px solid #ece8db;background:#ece8db;color:#0b0b09;cursor:pointer;transition:transform .12s ease,background .15s ease}.ds-btn-primary:hover{background:#fffdf5;transform:translateY(-1px)}.ds-btn-primary:focus-visible{outline:2px solid #fffdf5;outline-offset:2px}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary actions (Clear All, Add Random Points).",
+      "html": "<button class=\"ds-btn-ghost\">Clear All</button>",
+      "css": ".ds-btn-ghost{font:700 13px IBM Plex Sans Thai,sans-serif;padding:9px 15px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:transparent;color:#f1eee4;cursor:pointer;transition:transform .12s ease,border-color .15s ease}.ds-btn-ghost:hover{border-color:#ece8db;transform:translateY(-1px)}.ds-btn-ghost:focus-visible{outline:2px solid #fffdf5;outline-offset:2px}"
+    },
+    {
+      "name": "Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Floating instrument card holding one tool.",
+      "html": "<article class=\"ds-panel\"><h2>Data Canvas</h2><p>Pick a tool below.</p></article>",
+      "css": ".ds-panel{background:linear-gradient(180deg,#1c1c17,#151511);border:1px solid rgba(255,255,255,.08);border-radius:16px;box-shadow:0 18px 40px -18px rgba(0,0,0,.65),0 2px 10px -2px rgba(0,0,0,.45);padding:16px 20px 18px;color:#f1eee4;font-family:IBM Plex Sans Thai,sans-serif}.ds-panel h2{font:600 18px Newsreader,Georgia,serif;margin:0 0 4px}.ds-panel p{margin:0;font-size:12.5px;color:#8a8778;line-height:1.5}"
+    },
+    {
+      "name": "Stat Tile",
+      "kind": "custom",
+      "refersTo": "stat-tile",
+      "description": "Label over a mono metric value.",
+      "html": "<div class=\"ds-stat\"><span>OOB error</span><b>0.125</b></div>",
+      "css": ".ds-stat{background:#22221b;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 12px;display:inline-block}.ds-stat span{display:block;font:700 10.5px IBM Plex Sans Thai,sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#8a8778;margin-bottom:4px}.ds-stat b{font:600 17px 'IBM Plex Mono',monospace;color:#f1eee4;font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "custom",
+      "refersTo": "segmented",
+      "description": "Single choice among a few modes.",
+      "html": "<div class=\"ds-seg\"><button class=\"on\">Add</button><button>Erase</button><button>Pan</button></div>",
+      "css": ".ds-seg{display:inline-flex;gap:2px;padding:4px;border:1px solid rgba(255,255,255,.16);border-radius:10px;background:#22221b}.ds-seg button{height:22px;padding:0 14px;border:0;border-radius:7px;background:transparent;color:#c3c0b2;font:700 12.5px IBM Plex Sans Thai,sans-serif;cursor:pointer}.ds-seg button.on{background:#ece8db;color:#0b0b09}.ds-seg button:hover:not(.on){background:rgba(255,255,255,.05);color:#f1eee4}"
+    },
+    {
+      "name": "Stepper",
+      "kind": "input",
+      "refersTo": "stepper",
+      "description": "Small whole numbers.",
+      "html": "<div class=\"ds-step\"><button>&minus;</button><input type=\"number\" value=\"3\"><button>+</button></div>",
+      "css": ".ds-step{display:inline-flex;height:32px;border:1px solid rgba(255,255,255,.16);border-radius:9px;background:#22221b;overflow:hidden}.ds-step input{width:52px;border:0;background:transparent;color:#f1eee4;text-align:center;font:600 13px 'IBM Plex Mono',monospace}.ds-step button{width:34px;border:0;background:transparent;color:#f1eee4;font:700 16px IBM Plex Sans Thai,sans-serif;cursor:pointer}.ds-step button:hover{background:rgba(241,238,228,.14);color:#fffdf5}"
+    },
+    {
+      "name": "Class Chip",
+      "kind": "chip",
+      "refersTo": "",
+      "description": "Round chip that picks a class by its color.",
+      "html": "<span class=\"ds-chip\">B</span>",
+      "css": ".ds-chip{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:50%;color:#f1eee4;font:800 13px IBM Plex Sans Thai,sans-serif;border:1px solid rgba(217,89,38,.7);background:color-mix(in srgb,#e66a12 14%,#22221b)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Night Observatory",
+    "overview": "A black room with a few well-lit instruments in it. The page recedes into near-black so the data is the only thing that glows. Surfaces are quiet, restrained and precise.",
+    "keyCharacteristics": [
+      "Black page, tonal-layered panels, hairline borders.",
+      "Two floating columns, each with its own scrollbar.",
+      "Series colors belong to the data classes only.",
+      "Serif for meaning, sans for interface, mono for numbers.",
+      "Each input type has its own control."
+    ],
+    "rules": [
+      {
+        "name": "The Glow-Only-The-Data Rule",
+        "body": "Saturated color belongs to the data and to the chalk accent. Chrome stays neutral.",
+        "section": "colors"
+      },
+      {
+        "name": "The Black Floor Rule",
+        "body": "The page background is always black-family. Never introduce a light theme or a light panel.",
+        "section": "colors"
+      },
+      {
+        "name": "The Mono-For-Numbers Rule",
+        "body": "Every measured quantity is monospace with tabular figures.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tonal-First Rule",
+        "body": "Separate things by a lightness step or a hairline before reaching for a shadow.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Two Scrolls Rule",
+        "body": "The left and right columns scroll independently and fill the screen under the title bar. The footer is content at the end of the page, never fixed or sticky. Below 900px the columns stack and the page scrolls as one.",
+        "section": "layout"
+      }
+    ],
+    "dos": [
+      "Do keep the page background black-family.",
+      "Do put numbers in IBM Plex Mono with tabular figures.",
+      "Do keep every pointer interaction available from the keyboard and keep 44px touch hit areas.",
+      "Do choose the control by the value: segmented for modes, chips for colors and sizes, steppers for small integers, sliders for wide ranges, a switch for on/off.",
+      "Do keep the two columns as independent scroll containers with themed slim scrollbars."
+    ],
+    "donts": [
+      "Don't introduce light panels or light-on-light text.",
+      "Don't use series colors for buttons or chrome.",
+      "Don't put a row of identical pills where a stepper, slider or switch fits the value better."
+    ]
+  }
+}

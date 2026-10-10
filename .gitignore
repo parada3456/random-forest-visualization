@@ -1,0 +1,18 @@
+# Claude Code: local settings and installed skills are per-machine
+.claude/
+
+# Impeccable: keep design.json, ignore scratch and local-only files
+.impeccable/font-compare.html
+.impeccable/live/
+.impeccable/config.local.json
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Logs and temp files
+*.log
+*.tmp
