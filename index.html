@@ -244,12 +244,16 @@
 
   /* ---------- Model state panel ---------- */
   .model-tabs{ display:flex; gap:8px; margin-bottom: 18px; }
-  .model-tab{
+  .model-tab, .rg-tab{
     flex:1; padding:8px; border-radius:9px; border:1px solid var(--border-strong);
     background: var(--surface-3); color: var(--ink-dim); font-weight:700; font-size:var(--fs-ui);
     cursor:pointer; font-family:"IBM Plex Sans Thai",sans-serif; transition: all .15s ease;
   }
-  .model-tab.active{ background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .mode-tabs{ align-self:center; }
+  .rg-canvas-wrap canvas{ cursor: crosshair; }
+  .rg-legend{ display:flex; flex-wrap:wrap; gap:6px 18px; margin-top:10px; font-size:12px; color: var(--ink-muted); }
+  .rg-legend i{ display:inline-block; width:16px; height:3px; border-radius:2px; margin-right:6px; vertical-align:middle; }
+  .model-tab.active, .rg-tab.active{ background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 
   .tree-tabs{ display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:18px; }
   .tree-tabs::-webkit-scrollbar{ height:6px; }
@@ -279,6 +283,12 @@
   .forest-cell{ display:flex; flex-direction:column; align-items:stretch; gap:5px; text-align:center; }
   .forest-cell canvas{ width:100%; height:auto; aspect-ratio:1; border-radius:8px; border:1px solid var(--border-strong); background:var(--well); }
   .forest-cell span{ font-size:12px; color: var(--ink-muted); font-family:"IBM Plex Mono",monospace; }
+  .ov-viewer{ display:flex; flex-direction:column; align-items:center; gap:10px; margin-bottom:18px; padding-bottom:18px; border-bottom:1px dashed var(--border); }
+  .ov-viewer canvas{ width:100%; max-width:380px; height:auto; aspect-ratio:1; border-radius:12px; border:2px solid var(--accent); background:var(--well); }
+  .ov-viewer span.ov-caption{ font-size:12.5px; font-weight:700; color: var(--accent-strong); text-align:center; }
+  .forest-cell, .final-tile canvas{ cursor:pointer; }
+  .forest-cell.is-picked canvas{ border-color: var(--accent-strong); box-shadow:0 0 0 2px var(--accent); }
+  .forest-cell:hover canvas{ border-color: var(--accent); }
   .final-tile{ display:flex; flex-direction:column; align-items:center; gap:9px; padding-top:16px; border-top:1px dashed var(--border); }
   .final-tile canvas{ width:240px; max-width:100%; height:auto; aspect-ratio:1; border-radius:12px; border:2px solid var(--accent); background:var(--well); }
   .final-tile span{ font-size:12.5px; font-weight:700; color: var(--accent-strong); text-align:center; }
@@ -571,6 +581,10 @@
   <header class="site-header">
     <div class="head-row">
       <h1>Random Forest, Step by Step</h1>
+      <div class="joined mode-tabs" role="tablist" aria-label="Task type">
+        <button class="mode-tab active" id="tabClassification" data-mode="classification" type="button" role="tab" aria-selected="true">Classification</button>
+        <button class="mode-tab" id="tabRegression" data-mode="regression" type="button" role="tab" aria-selected="false">Regression</button>
+      </div>
       <div class="head-tools">
         
         <button id="btnGuide" class="btn btn-ghost guide-btn" type="button" aria-haspopup="dialog">
@@ -583,7 +597,7 @@
     <p class="lede" id="ledeMore" hidden>A random forest grows many decision trees, each on a <strong>bootstrap-resampled</strong> copy of the data, and lets every split consider only a <strong>random subset of features</strong>. Averaging their votes turns a flock of overfit, high-variance trees into one stable predictor.</p>
   </header>
 
-  <main class="workspace">
+  <main class="workspace" id="viewClassification">
     <section class="column column-left">
 
       <article class="panel" id="panel-data">
@@ -745,8 +759,13 @@
         </div>
 
         <div id="modelOverviewView" hidden>
-          <p class="panel-hint" style="margin-bottom:6px;">Each tile is one tree's own decision boundary.<span class="explain-more" id="forestOverviewMore" hidden> Trained on only its own bootstrap sample. The highlighted tile combines all of them by majority vote — the forest's actual output, identical to the boundary shown on the Data Canvas.</span></p>
+          <p class="panel-hint" style="margin-bottom:6px;">Click a tile to see that tree large, or use the toggle for the final forest. Each tile is one tree's own decision boundary.<span class="explain-more" id="forestOverviewMore" hidden> Trained on only its own bootstrap sample. The highlighted tile combines all of them by majority vote — the forest's actual output, identical to the boundary shown on the Data Canvas.</span></p>
           <button aria-expanded="false" class="explain-toggle" type="button" data-target="forestOverviewMore" style="margin-bottom:12px;">Show more</button>
+          <div class="ov-viewer" id="clsOvViewer" hidden>
+            <div class="joined" role="group" aria-label="Overview viewer"><button type="button" class="active" data-ov="tree" id="clsOvTreeBtn">Tree</button><button type="button" data-ov="final">Final forest</button></div>
+            <canvas id="clsOvCanvas" width="380" height="380"></canvas>
+            <span class="ov-caption" id="clsOvCaption"></span>
+          </div>
           <div class="forest-grid" id="forestGrid"></div>
           <div class="final-tile" id="finalTile"></div>
         </div>
@@ -784,6 +803,161 @@
         </details>
       </article>
 
+    </section>
+  </main>
+
+  <main class="workspace" id="viewRegression" hidden>
+    <section class="column column-left">
+
+      <article class="panel" id="rg-panel-data">
+        <div class="panel-head">
+          <h2>Data Canvas</h2>
+          <p class="panel-hint">One feature <b>x</b> predicts a number <b>y</b>. <b>Add</b> paints points; <b>Erase</b> wipes them. The curve is the forest's prediction.</p>
+        </div>
+        <div class="tool-group">
+          <div class="tb-row"><span class="field-label">Tool</span><div class="joined" role="group" aria-label="Canvas tool">
+            <button class="active" id="rgToolAdd" data-tool="add" type="button" aria-pressed="true"><svg class="ico" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Add</button>
+            <button id="rgToolErase" data-tool="erase" type="button" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 21h10M5.5 13.5 13 6a2.1 2.1 0 0 1 3 0l2 2a2.1 2.1 0 0 1 0 3L10.5 18.5a2 2 0 0 1-1.4.5H7.7a2 2 0 0 1-1.4-.6l-.8-.8a2 2 0 0 1 0-2.6Z"/></svg> Erase</button>
+          </div>
+            <div class="tb-actions inline"><button id="rgUndo" class="btn btn-ghost" type="button" disabled>Undo</button><button id="rgClear" class="btn btn-ghost" type="button">Clear all</button></div>
+          </div>
+          <div class="tb-row"><span class="field-label" id="rgBrushLabel">Brush size<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Radius of the circle that Add paints into and Erase wipes out.</span></span></span><div class="chips seg" id="rgSegBrush" role="radiogroup" aria-labelledby="rgBrushLabel"><button type="button" class="seg-btn" role="radio" aria-checked="false" data-value="10" aria-label="Small" title="Small (10px)"><i class="seg-dot" style="--d:5px"></i></button><button type="button" class="seg-btn active" role="radio" aria-checked="true" data-value="18" aria-label="Medium" title="Medium (18px)"><i class="seg-dot" style="--d:9px"></i></button><button type="button" class="seg-btn" role="radio" aria-checked="false" data-value="30" aria-label="Large" title="Large (30px)"><i class="seg-dot" style="--d:14px"></i></button><button type="button" class="seg-btn" role="radio" aria-checked="false" data-value="50" aria-label="Extra large" title="Extra large (50px)"><i class="seg-dot" style="--d:20px"></i></button></div></div>
+          <div class="tb-row"><span class="field-label">Density<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">How many points get scattered per brush stamp.</span></span></span><div class="stepper" role="group" aria-label="density"><button type="button" class="step-btn" data-dir="-1" data-inc="1" aria-label="Decrease density">−</button><input type="number" id="rgInDensity" min="1" max="12" step="1" value="3" inputmode="numeric"><button type="button" class="step-btn" data-dir="1" data-inc="1" aria-label="Increase density">+</button></div></div>
+        </div>
+
+        <div class="canvas-wrap rg-canvas-wrap">
+          <canvas id="rgCanvas" tabindex="0" role="application" aria-label="Regression canvas: add or erase data points" aria-describedby="rgKeys"></canvas>
+          <p id="rgKeys" class="sr-only">Keyboard: arrow keys move the cursor. Enter or Space adds or erases at the cursor.</p>
+          <div class="canvas-badge" id="rgPointCount">N = 0</div>
+        </div>
+        <div class="rg-legend">
+          <span><i style="background:var(--series-a)"></i>Forest prediction (mean of trees)</span>
+          <span><i style="background:var(--series-b); opacity:.6"></i>Individual trees</span>
+          <span><i style="background:var(--series-c)"></i>Selected tree</span>
+        </div>
+        <p class="axis-caption"><b>x</b> = feature &nbsp;·&nbsp; <b>y</b> = target. Hollow points are <b>out-of-bag</b> for the selected tree. <span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Each tree predicts a flat value (the mean of y) inside every region it carves out of x, so one tree is a staircase. Averaging many staircases built on different bootstrap samples gives a smooth curve that tracks the signal and ignores noise.</span></span></p>
+
+        <div class="tb-section dataset-section">
+          <h3 class="section-title">Dataset<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">"New sample" replaces the points with N fresh ones drawn from the chosen curve plus noise.</span></span></h3>
+          <div class="tb-row"><span class="field-label" id="rgPatternLabel">Pattern</span><div class="tiles seg" id="rgSegPattern" role="radiogroup" aria-labelledby="rgPatternLabel">
+            <button type="button" class="seg-btn tile active" role="radio" aria-checked="true" data-value="sine"><svg viewBox="0 0 40 28" width="40" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 14C10 0 14 0 20 14S30 28 37 14"/></svg><span>Sine</span></button>
+            <button type="button" class="seg-btn tile" role="radio" aria-checked="false" data-value="linear"><svg viewBox="0 0 40 28" width="40" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 24L36 4"/></svg><span>Linear</span></button>
+            <button type="button" class="seg-btn tile" role="radio" aria-checked="false" data-value="quad"><svg viewBox="0 0 40 28" width="40" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 4Q20 44 36 4"/></svg><span>Parabola</span></button>
+            <button type="button" class="seg-btn tile" role="radio" aria-checked="false" data-value="step"><svg viewBox="0 0 40 28" width="40" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 22H14V14H26V6H37"/></svg><span>Steps</span></button>
+            <button type="button" class="seg-btn tile" role="radio" aria-checked="false" data-value="wave"><svg viewBox="0 0 40 28" width="40" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2 14C5 2 8 2 11 14S17 26 20 14 26 2 29 14 35 26 38 14"/></svg><span>Wiggly</span></button>
+          </div></div>
+          <div class="tb-row"><span class="field-label" id="rgNoiseLabel">Noise<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Random scatter around the true curve. With more noise a single deep tree chases the scatter (high variance); the forest averages it away.</span></span></span><div class="stops-slider"><input type="range" id="rgInNoise" min="0" max="2" step="1" value="1" aria-labelledby="rgNoiseLabel" aria-valuetext="Medium"><div class="stops" aria-hidden="true"><span>Low</span><span>Medium</span><span>High</span></div></div></div>
+          <div class="tb-row"><label class="field-label" for="rgInTotalN">Points</label>
+            <div class="xy-group">
+              <div class="stepper" role="group" aria-label="number of points"><button type="button" class="step-btn" data-dir="-1" data-inc="10" aria-label="Decrease number of points">−</button><input type="number" id="rgInTotalN" min="5" max="300" step="1" value="60" inputmode="numeric"><button type="button" class="step-btn" data-dir="1" data-inc="10" aria-label="Increase number of points">+</button></div>
+              <button id="rgNewSample" class="btn btn-ghost" type="button">New sample</button>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel" id="rg-panel-controls">
+        <div class="panel-head">
+          <h2>Hyperparameters &amp; Controls</h2>
+          <p class="panel-hint">Changing a setting resets the forest so every tree is grown under the same rules.</p>
+        </div>
+        <div class="param-group">
+          <h3 class="section-title">Forest</h3>
+          <div class="param param-slider">
+            <label class="param-label" for="rgInNTrees">Number of Trees (T)<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">How many bootstrap trees to grow. The forest predicts the <b>average</b> of their outputs. More trees smooth the curve until it plateaus.</span></span></label><span class="value" id="rgValNTrees">12</span>
+            <input type="range" id="rgInNTrees" min="1" max="40" value="12" step="1">
+          </div>
+          <div class="param param-slider">
+            <label class="param-label" for="rgInBootstrap">Bootstrap Sample Size<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Fraction of the dataset re-drawn WITH replacement to train each tree. Points a tree never draws are its out-of-bag (OOB) set, used to estimate error for free.</span></span></label><span class="value" id="rgValBootstrap">100%</span>
+            <input type="range" id="rgInBootstrap" min="0.4" max="1" value="1" step="0.05">
+          </div>
+        </div>
+        <div class="param-group">
+          <h3 class="section-title">Each tree</h3>
+          <div class="param">
+            <label class="param-label" for="rgInMaxDepth">Max Depth<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Longest path from root to leaf. A tree of depth d has at most 2<sup>d</sup> flat steps. Shallow trees underfit; deep ones memorize noise, which the forest then averages out.</span></span></label>
+            <div class="stepper" role="group" aria-label="max depth"><button type="button" class="step-btn" data-dir="-1" data-inc="1" aria-label="Decrease max depth">−</button><input type="number" id="rgInMaxDepth" min="1" max="10" step="1" value="4" inputmode="numeric"><button type="button" class="step-btn" data-dir="1" data-inc="1" aria-label="Increase max depth">+</button></div>
+          </div>
+          <div class="param">
+            <label class="param-label" for="rgInMinSamples">Min Samples to Split<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">A node stops splitting once it holds fewer points than this. Raising it makes wider, smoother steps.</span></span></label>
+            <div class="stepper" role="group" aria-label="min samples to split"><button type="button" class="step-btn" data-dir="-1" data-inc="1" aria-label="Decrease min samples to split">−</button><input type="number" id="rgInMinSamples" min="2" max="12" step="1" value="4" inputmode="numeric"><button type="button" class="step-btn" data-dir="1" data-inc="1" aria-label="Increase min samples to split">+</button></div>
+          </div>
+        </div>
+        <div class="run-bar">
+          <div class="control-buttons">
+            <button id="rgStep" class="btn btn-primary" type="button"><svg class="ico" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 5v14M11 5l9 7-9 7Z"/></svg> Step-by-step <small>grow one tree</small></button>
+            <button id="rgPlay" class="btn btn-accent" type="button"><svg class="ico" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l14 8-14 8Z"/></svg> Play until Convergence</button>
+            <button id="rgReset" class="btn btn-ghost" type="button"><svg class="ico" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 3-6.2M4 4v4h4"/></svg> Reset Forest</button>
+          </div>
+          <div class="status-line" id="rgStatus">Forest not started — press <b>Step-by-step</b> or <b>Play until Convergence</b> to grow the first tree.</div>
+        </div>
+      </article>
+    </section>
+
+    <section class="column column-right">
+      <article class="panel" id="rg-panel-model">
+        <div class="panel-head">
+          <h2>Model State</h2>
+          <p class="panel-hint">Split score: variance reduction <span class="info-tip term mono" tabindex="0">MSE = mean( (yᵢ − ȳ)² )<span class="tip-bubble">Mean squared error of a node if it predicts its own average ȳ. Every candidate threshold is scored by the weighted MSE of its two children, and the split that minimizes it wins.</span></span> &nbsp;·&nbsp; forest output <span class="info-tip term mono" tabindex="0">ŷ = mean( h₁(x), …, h_T(x) )<span class="tip-bubble">Each tree outputs the average y of the leaf that x falls in. The forest predicts the average of the T tree outputs.</span></span></p>
+        </div>
+        <div class="model-tabs" role="tablist" aria-label="Model state view">
+          <button class="rg-tab active" data-tab="detail" type="button" role="tab" aria-selected="true">Tree Detail</button>
+          <button class="rg-tab" data-tab="overview" type="button" role="tab" aria-selected="false">Forest Overview</button>
+        </div>
+        <div id="rgDetail">
+          <div class="tree-tabs" id="rgTreeTabs"></div>
+          <div class="bootstrap-matrix">
+            <div class="bm-title">Bootstrap Weights <span id="rgBmTitle">&nbsp;— no tree yet</span><span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Each tree trains on N draws made WITH replacement from the N original points — some points get picked several times, some are skipped entirely (out-of-bag) for that tree.</span></span></div>
+            <div class="bm-grid" id="rgBmGrid"></div>
+            <div class="bm-legend">
+              <span><i style="background:var(--surface-3); border:1px solid var(--border);"></i>out-of-bag (0×)</span>
+              <span><i style="background:color-mix(in srgb, var(--series-a) 67%, transparent);"></i>sampled 1×</span>
+              <span><i style="background:var(--series-a);"></i>sampled 3×+</span>
+            </div>
+            <p class="bm-summary" id="rgBmSummary" aria-live="polite"></p>
+          </div>
+          <div class="tree-scroll" id="rgTreeScroll"></div>
+        </div>
+        <div id="rgOverview" hidden>
+          <p class="panel-hint" style="margin-bottom:12px;">Each tile is one tree's own staircase. The highlighted tile averages them all — the forest's actual output, identical to the curve on the Data Canvas.</p>
+          <div class="ov-viewer" id="rgOvViewer" hidden>
+            <div class="joined" role="group" aria-label="Overview viewer"><button type="button" class="active" data-ov="tree" id="rgOvTreeBtn">Tree</button><button type="button" data-ov="final">Final forest</button></div>
+            <canvas id="rgOvCanvas" width="380" height="380"></canvas>
+            <span class="ov-caption" id="rgOvCaption"></span>
+          </div>
+          <div class="forest-grid" id="rgForestGrid"></div>
+          <div class="final-tile" id="rgFinalTile"></div>
+        </div>
+      </article>
+
+      <article class="panel" id="rg-panel-loss">
+        <div class="panel-head">
+          <h2>Error Curve</h2>
+          <p class="panel-hint">RMSE is the typical size of a miss, in units of y. OOB scores each tree on the points it never saw.</p>
+        </div>
+        <div class="stat-row">
+          <div class="stat-tile"><span class="stat-label">Trees Built</span><span class="stat-value" id="rgStatTrees">0 / 12</span></div>
+          <div class="stat-tile"><span class="stat-label">OOB RMSE<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">For each point, average only the trees that did NOT see it in their bootstrap sample, then compare with the true y. A free estimate of error on new data.</span></span></span><span class="stat-value" id="rgStatOob">—</span></div>
+          <div class="stat-tile"><span class="stat-label">Training RMSE<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Error of the full forest on the training points, including trees that already saw them, so it looks more optimistic than OOB.</span></span></span><span class="stat-value" id="rgStatTrain">—</span></div>
+        </div>
+        <div class="chart-wrap" id="rgChartWrap">
+          <svg id="rgLossSvg" role="group" tabindex="0" aria-roledescription="line chart" aria-describedby="rgChartHelp" aria-label="Error curve: no trees grown yet" viewBox="0 0 640 260" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="chart-tooltip" id="rgChartTip" hidden></div>
+          <p id="rgChartHelp" class="sr-only">Use the left and right arrow keys, Home and End to read each tree's error. On touch, tap or drag across the chart.</p>
+          <p id="rgChartReadout" class="sr-only" aria-live="polite"></p>
+        </div>
+        <div class="legend-row">
+          <span class="legend-item"><i class="swatch-line oob"></i>OOB RMSE</span>
+          <span class="legend-item"><i class="swatch-line train"></i>Training RMSE</span>
+        </div>
+        <details class="chart-table">
+          <summary>View values as a table</summary>
+          <table>
+            <thead><tr><th scope="col">Trees</th><th scope="col">OOB RMSE</th><th scope="col">Training RMSE</th></tr></thead>
+            <tbody id="rgChartTable"><tr><td colspan="3">No trees grown yet</td></tr></tbody>
+          </table>
+        </details>
+      </article>
     </section>
   </main>
 
@@ -1722,6 +1896,7 @@
     state.selectedTreeIdx = +btn.dataset.idx;
     renderTreeTabs();
     renderTreeDetail();
+    drawOvViewer();
   });
 
   function renderTreeDetail(){
@@ -1771,6 +1946,7 @@
     if(T === 0){
       forestGrid.innerHTML = `<div class="empty-state"><svg class="empty-glyph" viewBox="0 0 64 48" width="72" height="54" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="25" y="3" width="14" height="9" rx="3"/><path d="M32 12v6M32 18H14v6M32 18h18v6"/><rect x="7" y="24" width="14" height="9" rx="3" stroke-dasharray="3 3"/><rect x="43" y="24" width="14" height="9" rx="3" stroke-dasharray="3 3"/><path d="M14 33v5M50 33v5" stroke-dasharray="2 4"/></svg><h3>Nothing to compare yet</h3><p>Grow a few trees, then compare each tree's decision boundary with the forest's final vote.</p><button class="btn btn-primary empty-grow" type="button">Grow the first tree</button></div>`;
       finalTile.innerHTML = '';
+      document.getElementById('clsOvViewer').hidden = true;
       return;
     }
     const bounds = computeDataBounds();
@@ -1784,7 +1960,35 @@
     finalTile.innerHTML = `<canvas id="finalCanvas" width="240" height="240"></canvas><span>Majority Vote — Final Forest Prediction (T = ${T})</span>`;
     const fc = document.getElementById('finalCanvas').getContext('2d');
     drawMiniBoundary(fc, (pt) => ensemblePredict(pt, state.trees), 240, 240, 48, false, bounds);
+    drawOvViewer(bounds);
   }
+  let ovFinal = true;
+  function drawOvViewer(bounds){
+    const v = document.getElementById('clsOvViewer'), T = state.trees.length;
+    v.hidden = T === 0;
+    if(!T) return;
+    bounds = bounds || computeDataBounds();
+    const i = state.selectedTreeIdx >= 0 ? state.selectedTreeIdx : T - 1;
+    const treeBtn = document.getElementById('clsOvTreeBtn');
+    treeBtn.textContent = 'Tree ' + (i + 1);
+    treeBtn.classList.toggle('active', !ovFinal);
+    v.querySelector('[data-ov=final]').classList.toggle('active', ovFinal);
+    const c = document.getElementById('clsOvCanvas').getContext('2d');
+    if(ovFinal) drawMiniBoundary(c, pt => ensemblePredict(pt, state.trees), 380, 380, 64, false, bounds);
+    else drawMiniBoundary(c, pt => predictTree(state.trees[i], pt), 380, 380, 64, false, bounds);
+    document.getElementById('clsOvCaption').textContent = ovFinal ? `Final forest — majority vote of ${T} trees` : `Tree ${i + 1} alone — trained on its own bootstrap sample`;
+    forestGrid.querySelectorAll('.forest-cell').forEach((el, k) => el.classList.toggle('is-picked', !ovFinal && k === i));
+  }
+  document.getElementById('clsOvViewer').addEventListener('click', e => {
+    const b = e.target.closest('[data-ov]'); if(!b) return;
+    ovFinal = b.dataset.ov === 'final'; drawOvViewer();
+  });
+  forestGrid.addEventListener('click', e => {
+    const cell = e.target.closest('.forest-cell'); if(!cell) return;
+    state.selectedTreeIdx = +cell.querySelector('canvas').dataset.idx;
+    ovFinal = false; renderTreeTabs(); renderTreeDetail(); drawOvViewer();
+  });
+  finalTile.addEventListener('click', () => { ovFinal = true; drawOvViewer(); });
 
   document.querySelectorAll('.model-tab').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -2161,6 +2365,575 @@
 </script>
 
 <script>
+/* ================= Regression forest ================= */
+(function(){
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const C_TREE = '#e66a12', C_ENS = '#56b4e9', C_SEL = '#f0e442', C_PT = '#f1eee4';
+
+  const st = {
+    data: [], trees: [], meta: [], sel: -1, oobSum: [], oobCnt: [], hist: [],
+    pattern: 'sine', noise: 1, undo: [], tool: 'add', brush: 18, density: 3,
+    painting: false, erasing: false, ptr: null, playing: false, timer: null
+  };
+
+  const canvas = $('rgCanvas'), ctx = canvas.getContext('2d');
+  const inNTrees = $('rgInNTrees'), inBoot = $('rgInBootstrap'), inDepth = $('rgInMaxDepth'), inMin = $('rgInMinSamples');
+  const inTotalN = $('rgInTotalN'), inNoise = $('rgInNoise'), inDensity = $('rgInDensity');
+  const btnPlay = $('rgPlay'), statusEl = $('rgStatus'), btnUndo = $('rgUndo');
+  const treeScroll = $('rgTreeScroll'), treeTabs = $('rgTreeTabs'), detail = $('rgDetail'), overview = $('rgOverview');
+  const lossSvg = $('rgLossSvg'), chartWrap = $('rgChartWrap'), chartTip = $('rgChartTip');
+
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const clamp01 = v => clamp(v, 0.03, 0.97);
+  function gaussian(){
+    let u = 0, v = 0;
+    while(u === 0) u = Math.random();
+    while(v === 0) v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function getParams(){
+    return { nTrees: +inNTrees.value, bootstrapRatio: +inBoot.value, maxDepth: +inDepth.value, minSamples: +inMin.value };
+  }
+  function setStatus(html, cls){ statusEl.innerHTML = html; statusEl.className = 'status-line' + (cls ? ' ' + cls : ''); }
+
+  // ---------- Tree ----------
+  function buildNode(idxs, depth, p){
+    const D = st.data, n = idxs.length;
+    let s = 0, s2 = 0;
+    for(const i of idxs){ const y = D[i].y; s += y; s2 += y * y; }
+    const mean = s / n, mse = Math.max(0, s2 / n - mean * mean);
+    const leaf = () => ({ leaf: true, val: mean, n, mse });
+    if(depth >= p.maxDepth || n < p.minSamples || mse < 1e-9) return leaf();
+    const sorted = idxs.slice().sort((a, b) => D[a].x - D[b].x);
+    let ls = 0, ls2 = 0, best = null;
+    for(let k = 0; k < n - 1; k++){
+      const y = D[sorted[k]].y;
+      ls += y; ls2 += y * y;
+      const x0 = D[sorted[k]].x, x1 = D[sorted[k + 1]].x;
+      if(x1 <= x0) continue;
+      const nl = k + 1, nr = n - nl, rs = s - ls, rs2 = s2 - ls2;
+      const sse = (ls2 - ls * ls / nl) + (rs2 - rs * rs / nr);
+      if(!best || sse < best.sse) best = { sse, th: (x0 + x1) / 2, k: nl };
+    }
+    if(!best) return leaf();
+    return {
+      leaf: false, th: best.th, n, mse,
+      left: buildNode(sorted.slice(0, best.k), depth + 1, p),
+      right: buildNode(sorted.slice(best.k), depth + 1, p)
+    };
+  }
+  function buildTree(p){
+    const N = st.data.length, n = Math.max(2, Math.round(N * p.bootstrapRatio));
+    const counts = new Array(N).fill(0), idxs = [];
+    for(let i = 0; i < n; i++){ const r = Math.floor(Math.random() * N); idxs.push(r); counts[r]++; }
+    return { root: buildNode(idxs, 0, p), counts };
+  }
+  function predictTree(node, x){
+    let c = node;
+    while(!c.leaf) c = x <= c.th ? c.left : c.right;
+    return c.val;
+  }
+  function ensemble(x, trees){
+    let s = 0;
+    for(const t of trees) s += predictTree(t, x);
+    return s / trees.length;
+  }
+
+  // ---------- Metrics ----------
+  function trainRmse(){
+    if(!st.data.length || !st.trees.length) return null;
+    let s = 0;
+    for(const p of st.data){ const d = ensemble(p.x, st.trees) - p.y; s += d * d; }
+    return Math.sqrt(s / st.data.length);
+  }
+  function oobRmse(){
+    let s = 0, n = 0;
+    for(let i = 0; i < st.data.length; i++){
+      if(st.oobCnt[i] > 0){ const d = st.oobSum[i] / st.oobCnt[i] - st.data[i].y; s += d * d; n++; }
+    }
+    return n ? Math.sqrt(s / n) : null;
+  }
+  const f3 = v => v === null ? '—' : v.toFixed(3);
+
+  function doStep(){
+    if(st.data.length < 2){ setStatus('Add at least two data points before growing a tree.'); return false; }
+    const p = getParams();
+    if(st.trees.length >= p.nTrees){ setStatus('Already at the requested tree count — raise <b>T</b> or press <b>Reset</b>.'); return false; }
+    const { root, counts } = buildTree(p);
+    st.trees.push(root); st.meta.push({ counts });
+    st.sel = st.trees.length - 1;
+    for(let i = 0; i < counts.length; i++){
+      if(counts[i] === 0){ st.oobSum[i] += predictTree(root, st.data[i].x); st.oobCnt[i]++; }
+    }
+    st.hist.push({ t: st.trees.length, train: trainRmse(), oob: oobRmse() });
+    renderAll();
+    setStatus(`Grew tree <b>#${st.trees.length}</b> from a bootstrap sample of <b>${counts.reduce((a, b) => a + b, 0)}</b> draws.`);
+    return true;
+  }
+  function converged(){
+    if(st.hist.length < 6) return false;
+    const l = st.hist.slice(-5).map(h => h.oob).filter(v => v !== null);
+    return l.length === 5 && Math.max(...l) - Math.min(...l) < 0.004;
+  }
+  const PLAY_HTML = btnPlay.innerHTML;
+  const PAUSE_HTML = '<svg class="ico" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg> Pause';
+  function tick(){
+    if(!st.playing) return;
+    if(st.trees.length >= getParams().nTrees){ stopPlaying('cap'); return; }
+    if(!doStep()){ stopPlaying(); return; }
+    if(st.trees.length >= getParams().nTrees){ stopPlaying('cap'); return; }
+    if(converged()){ stopPlaying('converged'); return; }
+    st.timer = setTimeout(tick, 550);
+  }
+  function startPlaying(){
+    if(st.playing) return;
+    if(st.data.length < 2){ setStatus('Add at least two data points before playing.'); return; }
+    st.playing = true; btnPlay.innerHTML = PAUSE_HTML; tick();
+  }
+  function stopPlaying(reason){
+    st.playing = false; clearTimeout(st.timer); btnPlay.innerHTML = PLAY_HTML;
+    if(reason === 'converged') setStatus('<b>Converged</b> — OOB RMSE has stayed flat over the last 5 trees.', 'converged');
+    else if(reason === 'cap') setStatus(`Reached the requested <b>${getParams().nTrees}</b> trees.`);
+  }
+  window.rgStopPlaying = () => stopPlaying();
+
+  function resetForest(){
+    stopPlaying();
+    st.trees = []; st.meta = []; st.sel = -1; st.hist = [];
+    st.oobSum = st.data.map(() => 0); st.oobCnt = st.data.map(() => 0);
+    renderAll();
+    setStatus('Forest reset — press <b>Step-by-step</b> or <b>Play until Convergence</b> to grow the first tree.');
+  }
+  function setData(d){
+    st.data = d;
+    $('rgPointCount').textContent = `N = ${d.length}`;
+    resetForest();
+  }
+  function renderAll(){
+    redraw(); renderTabs(); renderDetail(); renderOverview(); renderChart(); renderStats();
+  }
+  function renderStats(){
+    const last = st.hist[st.hist.length - 1];
+    $('rgStatTrees').textContent = `${st.trees.length} / ${getParams().nTrees}`;
+    $('rgStatOob').textContent = last ? f3(last.oob) : '—';
+    $('rgStatTrain').textContent = last ? f3(last.train) : '—';
+  }
+
+  // ---------- Canvas ----------
+  function resizeCanvas(){
+    const r = canvas.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  const XS = Array.from({ length: 161 }, (_, i) => i / 160);
+  function strokeCurve(c, W, H, fn, color, width, alpha){
+    c.beginPath();
+    XS.forEach((x, i) => { const px = x * W, py = (1 - fn(x)) * H; i ? c.lineTo(px, py) : c.moveTo(px, py); });
+    c.globalAlpha = alpha; c.strokeStyle = color; c.lineWidth = width; c.lineJoin = 'round'; c.stroke(); c.globalAlpha = 1;
+  }
+  function paint(c, W, H, o){
+    c.clearRect(0, 0, W, H);
+    c.strokeStyle = 'rgba(255,255,255,0.045)'; c.lineWidth = 1;
+    for(let i = 1; i < 10; i++){
+      c.beginPath(); c.moveTo(i / 10 * W, 0); c.lineTo(i / 10 * W, H); c.stroke();
+      c.beginPath(); c.moveTo(0, i / 10 * H); c.lineTo(W, i / 10 * H); c.stroke();
+    }
+    const T = st.trees;
+    if(o.trees) T.forEach((t, i) => { if(i !== o.sel) strokeCurve(c, W, H, x => predictTree(t, x), C_TREE, o.small ? 1 : 1.3, o.treeAlpha); });
+    if(o.sel >= 0 && T[o.sel]) strokeCurve(c, W, H, x => predictTree(T[o.sel], x), C_SEL, o.small ? 1.6 : 2, 0.95);
+    if(o.ens && T.length) strokeCurve(c, W, H, x => ensemble(x, T), C_ENS, o.small ? 1.8 : 3, 1);
+    const counts = o.sel >= 0 && st.meta[o.sel] ? st.meta[o.sel].counts : null;
+    const r = o.small ? 1.8 : 5;
+    st.data.forEach((p, i) => {
+      c.beginPath(); c.arc(p.x * W, (1 - p.y) * H, r, 0, Math.PI * 2);
+      if(counts && counts[i] === 0 && !o.small){ c.lineWidth = 1.6; c.strokeStyle = C_PT; c.stroke(); }
+      else { c.fillStyle = C_PT; c.globalAlpha = o.small ? 0.7 : 0.95; c.fill(); c.globalAlpha = 1; if(!o.small){ c.lineWidth = 1.5; c.strokeStyle = '#0b0b09'; c.stroke(); } }
+    });
+  }
+  function redraw(){
+    const r = canvas.getBoundingClientRect();
+    paint(ctx, r.width, r.height, { trees: true, treeAlpha: st.trees.length > 20 ? 0.16 : 0.3, ens: true, sel: st.sel });
+    if(st.ptr){
+      ctx.setLineDash([4, 3]); ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(st.ptr.x * r.width, (1 - st.ptr.y) * r.height, st.brush, 0, Math.PI * 2);
+      const col = st.tool === 'erase' ? '#fffdf5' : C_PT;
+      ctx.fillStyle = col + (st.tool === 'erase' ? '24' : '18'); ctx.fill(); ctx.strokeStyle = col; ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+  let rq = false;
+  function scheduleRedraw(){ if(rq) return; rq = true; requestAnimationFrame(() => { rq = false; redraw(); }); }
+  function ptrData(e){
+    const r = canvas.getBoundingClientRect();
+    return { x: (e.clientX - r.left) / r.width, y: 1 - (e.clientY - r.top) / r.height };
+  }
+  function pushUndo(){
+    st.undo.push(st.data.map(p => Object.assign({}, p)));
+    if(st.undo.length > 30) st.undo.shift();
+    btnUndo.disabled = false;
+  }
+  function eraseAt(p){
+    const w = canvas.getBoundingClientRect().width, n = st.data.length;
+    const keep = st.data.filter(q => Math.hypot((q.x - p.x) * w, (q.y - p.y) * w) > st.brush);
+    if(keep.length !== n) setData(keep);
+  }
+  function stampAt(p){
+    const w = canvas.getBoundingClientRect().width;
+    const add = [];
+    for(let i = 0; i < st.density; i++){
+      const a = Math.random() * 2 * Math.PI, rad = st.brush * Math.sqrt(Math.random()) / w;
+      add.push({ x: clamp(p.x + rad * Math.cos(a), 0, 1), y: clamp(p.y + rad * Math.sin(a), 0, 1) });
+    }
+    setData(st.data.concat(add));
+  }
+  let lastStamp = null;
+  canvas.addEventListener('pointerdown', e => {
+    try{ canvas.setPointerCapture(e.pointerId); }catch(_){}
+    const p = ptrData(e); st.ptr = p; pushUndo();
+    if(st.tool === 'add'){ st.painting = true; lastStamp = p; stampAt(p); }
+    else { st.erasing = true; eraseAt(p); }
+    redraw();
+  });
+  canvas.addEventListener('pointermove', e => {
+    const p = ptrData(e); st.ptr = p;
+    if(st.tool === 'add' && st.painting){
+      const w = canvas.getBoundingClientRect().width;
+      if(Math.hypot((p.x - lastStamp.x) * w, (p.y - lastStamp.y) * w) > st.brush * 0.6){ stampAt(p); lastStamp = p; }
+    } else if(st.tool === 'erase' && st.erasing) eraseAt(p);
+    scheduleRedraw();
+  });
+  canvas.addEventListener('pointerleave', () => { st.ptr = null; redraw(); });
+  const endGesture = () => { st.painting = false; st.erasing = false; };
+  window.addEventListener('pointerup', endGesture);
+  window.addEventListener('pointercancel', endGesture);
+  canvas.addEventListener('lostpointercapture', endGesture);
+  canvas.addEventListener('focus', () => { if(!st.ptr) st.ptr = { x: 0.5, y: 0.5 }; redraw(); });
+  canvas.addEventListener('blur', () => { st.ptr = null; redraw(); });
+  canvas.addEventListener('keydown', e => {
+    const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] }[e.key];
+    const cur = st.ptr || { x: 0.5, y: 0.5 };
+    if(d){
+      e.preventDefault(); const s = 0.04 * (e.shiftKey ? 3 : 1);
+      st.ptr = { x: clamp(cur.x + d[0] * s, 0, 1), y: clamp(cur.y + d[1] * s, 0, 1) }; scheduleRedraw();
+    } else if(e.key === 'Enter' || e.key === ' '){
+      e.preventDefault(); pushUndo();
+      st.tool === 'add' ? stampAt(cur) : eraseAt(cur); redraw();
+    }
+  });
+
+  // ---------- Bootstrap matrix & tree ----------
+  function renderBootstrap(counts, idx){
+    const grid = $('rgBmGrid');
+    if(!counts){ $('rgBmTitle').textContent = ' — no tree yet'; grid.innerHTML = ''; $('rgBmSummary').textContent = ''; return; }
+    $('rgBmTitle').textContent = ` — Tree #${idx} (dim = out-of-bag)`;
+    grid.innerHTML = counts.map((c, i) => {
+      const bg = c === 0 ? 'var(--surface-3)' : c === 1 ? 'color-mix(in srgb, var(--series-a) 40%, transparent)' : c === 2 ? 'color-mix(in srgb, var(--series-a) 67%, transparent)' : 'var(--series-a)';
+      return `<div class="bm-cell" style="background:${bg}; animation-delay:${Math.min(i * 12, 700)}ms" title="Point #${i} — sampled ${c}×"></div>`;
+    }).join('');
+    const oob = counts.filter(c => c === 0).length, total = counts.length;
+    $('rgBmSummary').innerHTML = `<b>${total - oob}</b> of ${total} points drawn · <b>${oob}</b> out-of-bag (<b>${total ? Math.round(100 * oob / total) : 0}%</b>) — a full-size bootstrap leaves about 37% out on average.`;
+  }
+  function countLeaves(n){ return n.leaf ? 1 : countLeaves(n.left) + countLeaves(n.right); }
+  function layout(n, depth, x0, x1, out){
+    if(n.leaf){ n._x = (x0 + x1) / 2; n._d = depth; out.push(n); return; }
+    const lc = countLeaves(n.left), rc = countLeaves(n.right), sp = x0 + (x1 - x0) * lc / (lc + rc);
+    layout(n.left, depth + 1, x0, sp, out); layout(n.right, depth + 1, sp, x1, out);
+    n._x = (n.left._x + n.right._x) / 2; n._d = depth;
+  }
+  const EMPTY_GLYPH = '<svg class="empty-glyph" viewBox="0 0 64 48" width="72" height="54" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="25" y="3" width="14" height="9" rx="3"/><path d="M32 12v6M32 18H14v6M32 18h18v6"/><rect x="7" y="24" width="14" height="9" rx="3" stroke-dasharray="3 3"/><rect x="43" y="24" width="14" height="9" rx="3" stroke-dasharray="3 3"/><path d="M14 33v5M50 33v5" stroke-dasharray="2 4"/></svg>';
+  function renderTreeSvg(root){
+    if(!root){
+      detail.classList.add('is-empty');
+      treeScroll.innerHTML = `<div class="empty-state">${EMPTY_GLYPH}<h3>No tree yet</h3><p>Grow one to see which points it drew and how it cuts x into flat steps.</p><button class="btn btn-primary rg-empty-grow" type="button">Grow the first tree</button></div>`;
+      return;
+    }
+    detail.classList.remove('is-empty');
+    const leaves = []; layout(root, 0, 0, 1, leaves);
+    const nodeW = 140, nodeH = 62, vGap = 80, hPad = 40;
+    const width = Math.max(560, leaves.length * (nodeW + 16) + hPad * 2);
+    const height = (Math.max(...leaves.map(l => l._d)) + 1) * vGap + nodeH + 30;
+    const px = nx => hPad + nx * (width - hPad * 2), py = d => 20 + d * vGap;
+    let edges = '', boxes = '';
+    (function draw(n){
+      const cx = px(n._x), cy = py(n._d) + nodeH / 2;
+      if(!n.leaf){
+        [n.left, n.right].forEach((ch, i) => {
+          const ccx = px(ch._x), ccy = py(ch._d) + nodeH / 2;
+          edges += `<line x1="${cx}" y1="${cy + nodeH / 2}" x2="${ccx}" y2="${ccy - nodeH / 2}" stroke="var(--border-strong)" stroke-width="1.5"/>`;
+          edges += `<text x="${(cx + ccx) / 2}" y="${(cy + ccy) / 2 - 4}" text-anchor="middle" font-size="14" fill="var(--ink-muted)" font-family="IBM Plex Mono, monospace">${i ? '>' : '≤'}</text>`;
+          draw(ch);
+        });
+        boxes += `<g><title>Internal node: ${n.n} points, MSE = ${n.mse.toFixed(4)}. Splits on x ≤ ${n.th.toFixed(3)} — the threshold that minimizes the weighted MSE of the two children among every candidate tried on this bootstrap sample.</title>
+          <rect x="${cx - nodeW / 2}" y="${cy - nodeH / 2}" width="${nodeW}" height="${nodeH}" rx="9" fill="var(--surface-3)" stroke="var(--border-strong)"/>
+          <text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="16" font-weight="700" fill="var(--ink)" font-family="IBM Plex Mono, monospace">x ≤ ${n.th.toFixed(2)}</text>
+          <text x="${cx}" y="${cy + 16}" text-anchor="middle" font-size="14" fill="var(--ink-muted)" font-family="IBM Plex Mono, monospace">n=${n.n} · MSE=${n.mse.toFixed(3)}</text></g>`;
+      } else {
+        boxes += `<g><title>Leaf: ${n.n} points reached here (MSE = ${n.mse.toFixed(4)}). The tree predicts ŷ = ${n.val.toFixed(3)} — the mean y of those points.</title>
+          <rect x="${cx - nodeW / 2}" y="${cy - nodeH / 2}" width="${nodeW}" height="${nodeH}" rx="9" fill="${C_TREE}22" stroke="${C_TREE}" stroke-width="1.5"/>
+          <rect x="${cx - nodeW / 2}" y="${cy - nodeH / 2}" width="4" height="${nodeH}" fill="${C_TREE}"/>
+          <text x="${cx + 4}" y="${cy - 6}" text-anchor="middle" font-size="16" font-weight="700" fill="${C_TREE}" font-family="IBM Plex Mono, monospace">ŷ = ${n.val.toFixed(2)}</text>
+          <text x="${cx + 4}" y="${cy + 16}" text-anchor="middle" font-size="14" fill="var(--ink-muted)" font-family="IBM Plex Mono, monospace">n=${n.n}</text></g>`;
+      }
+    })(root);
+    treeScroll.innerHTML = `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="Regression tree with ${leaves.length} leaves" style="width:100%;height:auto;min-width:${Math.round(width * 0.85)}px;max-width:${Math.round(width * 1.35)}px">${edges}${boxes}</svg>`;
+    requestAnimationFrame(() => { treeScroll.scrollLeft = Math.max(0, (treeScroll.scrollWidth - treeScroll.clientWidth) / 2); });
+  }
+  function renderTabs(){
+    treeTabs.innerHTML = st.trees.map((_, i) =>
+      `<button class="tree-tab ${i === st.sel ? 'active' : ''}" data-idx="${i}" type="button" aria-label="Tree ${i + 1}" title="Tree ${i + 1}">${i + 1}</button>`).join('');
+  }
+  treeTabs.addEventListener('click', e => {
+    const b = e.target.closest('.tree-tab'); if(!b) return;
+    st.sel = +b.dataset.idx; renderTabs(); renderDetail(); redraw(); drawOv();
+  });
+  function renderDetail(){
+    if(st.sel < 0 || !st.trees[st.sel]){ renderBootstrap(null); renderTreeSvg(null); return; }
+    renderBootstrap(st.meta[st.sel].counts, st.sel + 1);
+    renderTreeSvg(st.trees[st.sel]);
+  }
+  function renderOverview(){
+    const T = st.trees.length, grid = $('rgForestGrid'), fin = $('rgFinalTile');
+    overview.classList.toggle('is-empty', T === 0);
+    if(!T){
+      grid.innerHTML = `<div class="empty-state">${EMPTY_GLYPH}<h3>Nothing to compare yet</h3><p>Grow a few trees, then compare each tree's staircase with the forest's average.</p><button class="btn btn-primary rg-empty-grow" type="button">Grow the first tree</button></div>`;
+      fin.innerHTML = ''; $('rgOvViewer').hidden = true; return;
+    }
+    grid.innerHTML = st.trees.map((_, i) => `<div class="forest-cell"><canvas data-idx="${i}" width="112" height="112"></canvas><span>Tree ${i + 1}</span></div>`).join('');
+    grid.querySelectorAll('canvas').forEach(cv => {
+      const i = +cv.dataset.idx, c = cv.getContext('2d');
+      paint(c, 112, 112, { small: true, trees: false, ens: false, sel: -1 });
+      strokeCurve(c, 112, 112, x => predictTree(st.trees[i], x), C_TREE, 1.8, 1);
+    });
+    fin.innerHTML = `<canvas id="rgFinalCanvas" width="240" height="240"></canvas><span>Average — Final Forest Prediction (T = ${T})</span>`;
+    paint($('rgFinalCanvas').getContext('2d'), 240, 240, { trees: true, treeAlpha: 0.22, ens: true, sel: -1 });
+    drawOv();
+  }
+  let ovFinal = true;
+  function drawOv(){
+    const v = $('rgOvViewer'), T = st.trees.length;
+    v.hidden = T === 0;
+    if(!T) return;
+    const i = st.sel >= 0 ? st.sel : T - 1;
+    $('rgOvTreeBtn').textContent = 'Tree ' + (i + 1);
+    $('rgOvTreeBtn').classList.toggle('active', !ovFinal);
+    v.querySelector('[data-ov=final]').classList.toggle('active', ovFinal);
+    const c = $('rgOvCanvas').getContext('2d');
+    paint(c, 380, 380, { trees: ovFinal, treeAlpha: 0.22, ens: ovFinal, sel: ovFinal ? -1 : i });
+    $('rgOvCaption').textContent = ovFinal ? `Final forest — average of ${T} trees` : `Tree ${i + 1} alone — a staircase fit to its own bootstrap sample`;
+    $('rgForestGrid').querySelectorAll('.forest-cell').forEach((el, k) => el.classList.toggle('is-picked', !ovFinal && k === i));
+  }
+  $('rgOvViewer').addEventListener('click', e => {
+    const b = e.target.closest('[data-ov]'); if(!b) return;
+    ovFinal = b.dataset.ov === 'final'; drawOv();
+  });
+  $('rgForestGrid').addEventListener('click', e => {
+    const cell = e.target.closest('.forest-cell'); if(!cell) return;
+    st.sel = +cell.querySelector('canvas').dataset.idx;
+    ovFinal = false; renderTabs(); renderDetail(); redraw(); drawOv();
+  });
+  $('rgFinalTile').addEventListener('click', () => { ovFinal = true; drawOv(); });
+  document.querySelectorAll('.rg-tab').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.rg-tab').forEach(o => { o.classList.toggle('active', o === b); o.setAttribute('aria-selected', String(o === b)); });
+    detail.hidden = b.dataset.tab !== 'detail'; overview.hidden = b.dataset.tab !== 'overview';
+  }));
+  document.addEventListener('click', e => { if(e.target.closest('.rg-empty-grow')) $('rgStep').click(); });
+
+  // ---------- Error chart ----------
+  const PAD_L = 50, PAD_R = 16, PAD_T = 14, PAD_B = 30;
+  let VB_W = 640, VB_H = 260, PLOT_W = 0, PLOT_H = 0, Y_MAX = 0.2, chartIdx = -1;
+  function measure(){
+    VB_W = Math.max(320, Math.round(chartWrap.clientWidth) || 640);
+    VB_H = Math.max(200, Math.round(chartWrap.clientHeight) || 260);
+    PLOT_W = VB_W - PAD_L - PAD_R; PLOT_H = VB_H - PAD_T - PAD_B;
+    lossSvg.setAttribute('viewBox', `0 0 ${VB_W} ${VB_H}`);
+  }
+  const xForT = (t, n) => PAD_L + ((t - 1) / Math.max(n - 1, 1)) * PLOT_W;
+  const yForErr = e => PAD_T + (1 - Math.min(1, e / Y_MAX)) * PLOT_H;
+  function renderChart(){
+    const nT = getParams().nTrees;
+    measure();
+    let peak = 0; st.hist.forEach(h => { peak = Math.max(peak, h.oob || 0, h.train || 0); });
+    Y_MAX = [0.05, 0.1, 0.15, 0.2, 0.3, 0.5, 1].find(v => peak <= v * 0.92) || 1;
+    let g = '';
+    [0, 0.25, 0.5, 0.75, 1].forEach(l => {
+      const y = yForErr(l * Y_MAX);
+      g += `<line x1="${PAD_L}" y1="${y}" x2="${VB_W - PAD_R}" y2="${y}" stroke="var(--grid-line)" stroke-dasharray="3 4"/>`;
+      g += `<text x="${PAD_L - 8}" y="${y + 4}" text-anchor="end" font-size="12" fill="var(--ink-muted)" font-family="IBM Plex Mono, monospace">${(l * Y_MAX).toFixed(2)}</text>`;
+    });
+    g += `<line x1="${PAD_L}" y1="${VB_H - PAD_B}" x2="${VB_W - PAD_R}" y2="${VB_H - PAD_B}" stroke="var(--border-strong)"/>`;
+    g += `<text x="${(PAD_L + VB_W - PAD_R) / 2}" y="${VB_H - 8}" text-anchor="middle" font-size="12" fill="var(--ink-muted)" font-family="IBM Plex Mono, monospace">Trees added →</text>`;
+    const pts = k => st.hist.filter(h => h[k] !== null).map(h => [xForT(h.t, nT), yForErr(h[k])]);
+    const oob = pts('oob'), train = pts('train');
+    const line = a => a.map((p, i) => (i ? 'L' : 'M') + p[0] + ',' + p[1]).join(' ');
+    const area = oob.length ? `M${oob[0][0]},${VB_H - PAD_B} ` + oob.map(p => `L${p[0]},${p[1]}`).join(' ') + ` L${oob[oob.length - 1][0]},${VB_H - PAD_B} Z` : '';
+    lossSvg.innerHTML = `${g}
+      ${area ? `<path d="${area}" fill="var(--series-a)" opacity="0.10"/>` : ''}
+      ${train.length ? `<path d="${line(train)}" fill="none" stroke="var(--ink-muted)" stroke-width="2" stroke-dasharray="5 3" vector-effect="non-scaling-stroke"/>` : ''}
+      ${oob.length ? `<path d="${line(oob)}" fill="none" stroke="var(--series-a)" stroke-width="2.4" vector-effect="non-scaling-stroke"/>` : ''}
+      ${oob.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="2.6" fill="var(--series-a)"/>`).join('')}
+      <line id="rgHoverLine" x1="0" y1="${PAD_T}" x2="0" y2="${VB_H - PAD_B}" stroke="var(--ink-dim)" stroke-width="1" opacity="0"/>
+      ${st.hist.length ? '' : `<text x="${VB_W / 2}" y="${VB_H / 2}" text-anchor="middle" font-size="14" fill="var(--ink-muted)">No trees grown yet</text>`}`;
+    $('rgChartTable').innerHTML = st.hist.length
+      ? st.hist.map(h => `<tr><td>${h.t}</td><td>${f3(h.oob)}</td><td>${f3(h.train)}</td></tr>`).join('')
+      : '<tr><td colspan="3">No trees grown yet</td></tr>';
+    chartIdx = -1;
+    const l = st.hist[st.hist.length - 1];
+    lossSvg.setAttribute('aria-label', l ? `Error curve after ${l.t} trees: out-of-bag RMSE ${f3(l.oob)}, training RMSE ${f3(l.train)}.` : 'Error curve: no trees grown yet');
+  }
+  function showPoint(i){
+    if(!st.hist.length) return;
+    chartIdx = clamp(i, 0, st.hist.length - 1);
+    const h = st.hist[chartIdx], nT = getParams().nTrees;
+    const rect = lossSvg.getBoundingClientRect(), wr = chartWrap.getBoundingClientRect();
+    const hx = xForT(h.t, nT), hl = $('rgHoverLine');
+    if(hl){ hl.setAttribute('x1', hx); hl.setAttribute('x2', hx); hl.setAttribute('opacity', 0.5); }
+    chartTip.hidden = false;
+    chartTip.style.left = clamp(rect.left + hx / VB_W * rect.width - wr.left, 70, wr.width - 70) + 'px';
+    chartTip.style.top = (rect.top + yForErr(h.oob !== null ? h.oob : Y_MAX / 2) / VB_H * rect.height - wr.top) + 'px';
+    chartTip.innerHTML = `Tree <b>#${h.t}</b><br>OOB: <b>${f3(h.oob)}</b><br>Train: <b>${f3(h.train)}</b>`;
+    $('rgChartReadout').textContent = `Tree ${h.t}: out-of-bag RMSE ${f3(h.oob)}, training RMSE ${f3(h.train)}.`;
+  }
+  function hidePoint(){
+    chartIdx = -1; chartTip.hidden = true;
+    const hl = $('rgHoverLine'); if(hl) hl.setAttribute('opacity', 0);
+  }
+  function nearest(clientX){
+    const rect = lossSvg.getBoundingClientRect(), rx = (clientX - rect.left) / rect.width * VB_W, nT = getParams().nTrees;
+    let bi = 0, bd = Infinity;
+    st.hist.forEach((h, i) => { const d = Math.abs(xForT(h.t, nT) - rx); if(d < bd){ bd = d; bi = i; } });
+    return bi;
+  }
+  lossSvg.addEventListener('pointermove', e => { if(st.hist.length) showPoint(nearest(e.clientX)); });
+  lossSvg.addEventListener('pointerdown', e => { if(st.hist.length) showPoint(nearest(e.clientX)); });
+  lossSvg.addEventListener('pointerleave', e => { if(e.pointerType === 'mouse' && document.activeElement !== lossSvg) hidePoint(); });
+  lossSvg.addEventListener('focus', () => { if(st.hist.length) showPoint(st.hist.length - 1); });
+  lossSvg.addEventListener('blur', hidePoint);
+  lossSvg.addEventListener('keydown', e => {
+    const n = st.hist.length; if(!n) return;
+    const cur = chartIdx < 0 ? n - 1 : chartIdx;
+    const nx = { ArrowLeft: cur - 1, ArrowRight: cur + 1, Home: 0, End: n - 1 }[e.key];
+    if(nx !== undefined){ e.preventDefault(); showPoint(nx); } else if(e.key === 'Escape') hidePoint();
+  });
+
+  // ---------- Datasets ----------
+  const NOISE_SD = [0.025, 0.07, 0.13], NOISE_LABELS = ['Low', 'Medium', 'High'];
+  const FN = {
+    sine: x => 0.5 + 0.36 * Math.sin(2 * Math.PI * x),
+    linear: x => 0.12 + 0.76 * x,
+    quad: x => 0.1 + 3.2 * (x - 0.5) * (x - 0.5) * 0.9 + 0.0,
+    step: x => x < 0.25 ? 0.2 : x < 0.5 ? 0.45 : x < 0.75 ? 0.7 : 0.4,
+    wave: x => 0.5 + 0.3 * Math.sin(6 * Math.PI * x) * (0.6 + 0.4 * x)
+  };
+  function generate(type, n, noise){
+    const f = FN[type] || FN.sine, sd = NOISE_SD[noise], pts = [];
+    for(let i = 0; i < n; i++){ const x = clamp(Math.random(), 0.02, 0.98); pts.push({ x, y: clamp01(f(x) + gaussian() * sd) }); }
+    return pts;
+  }
+  function showCountError(msg){
+    // reuse the toolbar number field's error styling
+    inTotalN.classList.toggle('has-error', !!msg);
+    inTotalN.title = msg || '';
+  }
+  function readN(){
+    const n = Number(inTotalN.value);
+    if(inTotalN.value === '' || !Number.isInteger(n) || n < 5 || n > 300){ showCountError('N must be a whole number from 5 to 300.'); return null; }
+    showCountError(''); return n;
+  }
+  function newSample(){
+    const n = readN(); if(n === null) return;
+    pushUndo(); setData(generate(st.pattern, n, st.noise));
+  }
+
+  // ---------- Wiring ----------
+  function bindSeg(id, apply){
+    const btns = [...$(id).querySelectorAll('.seg-btn')];
+    const pick = b => {
+      btns.forEach(o => { const on = o === b; o.classList.toggle('active', on); o.setAttribute('aria-checked', String(on)); o.tabIndex = on ? 0 : -1; });
+      apply(b.dataset.value);
+    };
+    btns.forEach(b => {
+      b.tabIndex = b.classList.contains('active') ? 0 : -1;
+      b.addEventListener('click', () => pick(b));
+      b.addEventListener('keydown', e => {
+        const d = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key]; if(!d) return;
+        e.preventDefault(); const nx = btns[(btns.indexOf(b) + d + btns.length) % btns.length]; nx.focus(); pick(nx);
+      });
+    });
+  }
+  bindSeg('rgSegBrush', v => { st.brush = +v; redraw(); });
+  bindSeg('rgSegPattern', v => { st.pattern = v; newSample(); });
+  inNoise.style.setProperty('--fill', '50%');
+  inNoise.addEventListener('input', () => {
+    inNoise.setAttribute('aria-valuetext', NOISE_LABELS[+inNoise.value]);
+    inNoise.style.setProperty('--fill', (+inNoise.value / 2 * 100) + '%');
+  });
+  inNoise.addEventListener('change', () => { st.noise = +inNoise.value; newSample(); });
+  inDensity.addEventListener('input', () => { st.density = clamp(Math.round(+inDensity.value) || 1, 1, 12); });
+  inTotalN.addEventListener('input', readN);
+  inTotalN.addEventListener('change', newSample);
+  $('rgNewSample').addEventListener('click', newSample);
+  $('rgClear').addEventListener('click', () => { if(st.data.length){ pushUndo(); setData([]); } });
+  btnUndo.addEventListener('click', () => {
+    if(!st.undo.length) return;
+    setData(st.undo.pop()); btnUndo.disabled = !st.undo.length;
+  });
+  [['rgToolAdd', 'add'], ['rgToolErase', 'erase']].forEach(([id, tool]) => $(id).addEventListener('click', () => {
+    st.tool = tool;
+    [['rgToolAdd', 'add'], ['rgToolErase', 'erase']].forEach(([i, t]) => { $(i).classList.toggle('active', t === tool); $(i).setAttribute('aria-pressed', String(t === tool)); });
+    redraw();
+  }));
+  $('rgStep').addEventListener('click', () => { if(!st.playing) doStep(); });
+  btnPlay.addEventListener('click', () => st.playing ? stopPlaying() : startPlaying());
+  $('rgReset').addEventListener('click', resetForest);
+
+  function bindSlider(input, label, fmt){
+    const paintFill = () => input.style.setProperty('--fill', ((+input.value - +input.min) / (+input.max - +input.min) * 100) + '%');
+    paintFill();
+    input.addEventListener('input', () => { paintFill(); label.textContent = fmt(+input.value); });
+    input.addEventListener('change', resetForest);
+  }
+  bindSlider(inNTrees, $('rgValNTrees'), v => v);
+  bindSlider(inBoot, $('rgValBootstrap'), v => Math.round(v * 100) + '%');
+  inDepth.addEventListener('change', resetForest);
+  inMin.addEventListener('change', resetForest);
+
+  new ResizeObserver(() => { resizeCanvas(); redraw(); }).observe(canvas.parentElement);
+  new ResizeObserver(() => renderChart()).observe(chartWrap);
+
+  resizeCanvas();
+  readN();
+  setData(generate(st.pattern, +inTotalN.value, st.noise));
+})();
+
+/* ================= Classification / Regression tabs ================= */
+(function(){
+  const views = { classification: document.getElementById('viewClassification'), regression: document.getElementById('viewRegression') };
+  const tabs = [...document.querySelectorAll('.mode-tab')];
+  function setMode(mode){
+    if(!views[mode]) mode = 'classification';
+    // pause whichever forest is auto-playing so it doesn't grow unseen
+    const clsPlay = document.getElementById('btnPlay');
+    if(mode === 'regression' && clsPlay && clsPlay.classList.contains('is-active')) clsPlay.click();
+    if(mode === 'classification' && window.rgStopPlaying) window.rgStopPlaying();
+    document.body.dataset.mode = mode;
+    Object.keys(views).forEach(k => { views[k].hidden = k !== mode; });
+    tabs.forEach(t => { const on = t.dataset.mode === mode; t.classList.toggle('active', on); t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; });
+    try{ history.replaceState(null, '', mode === 'regression' ? '#regression' : location.pathname + location.search); }catch(e){}
+    window.dispatchEvent(new Event('resize'));
+  }
+  tabs.forEach(t => {
+    t.addEventListener('click', () => setMode(t.dataset.mode));
+    t.addEventListener('keydown', e => {
+      const d = { ArrowRight: 1, ArrowLeft: -1 }[e.key]; if(!d) return;
+      e.preventDefault(); const n = tabs[(tabs.indexOf(t) + d + tabs.length) % tabs.length]; n.focus(); setMode(n.dataset.mode);
+    });
+  });
+  setMode(location.hash === '#regression' ? 'regression' : 'classification');
+})();
+</script>
+
+<script>
 (function(){
   const tour = document.getElementById('tour');
   const spot = document.getElementById('tourSpot');
@@ -2180,7 +2953,7 @@
   new ResizeObserver(syncHeaderHeight).observe(siteHeader);
   const SEEN_KEY = 'rf-lab-tour-seen';
 
-  const STEPS = [
+  const CLS_STEPS = [
     { target: null, title: 'Welcome',
       body: 'You will <b>build a small dataset</b>, set the forest\'s rules, then <b>grow it one tree at a time</b> and watch why many noisy trees beat a single one. This tour takes about a minute.' },
     { target: '#panel-data .tool-group', title: '1. Pick a tool',
@@ -2201,13 +2974,38 @@
       body: 'Try <b>Spiral</b> with <b>High</b> noise and compare a depth of 2 against 8. You can reopen this guide any time with <b>How to use</b> in the header.' }
   ];
 
+  const REG_STEPS = [
+    { target: null, title: 'Welcome to regression',
+      body: 'Here the forest predicts a <b>number</b> instead of a class. You will sketch a curve of noisy points, then grow the forest one tree at a time and watch many jagged <b>staircases average into one smooth curve</b>.' },
+    { target: '#rg-panel-data .tool-group', title: '1. Pick a tool',
+      body: '<b>Add</b> paints points; <b>Erase</b> removes them. Brush size and density set how many points each stroke drops. <b>Undo</b> steps back.' },
+    { target: '#rg-panel-data .canvas-wrap', title: '2. Draw on the canvas',
+      body: 'Each point is one observation: <b>x</b> across, target <b>y</b> up. The <b>blue curve</b> is the forest\'s prediction; faint orange lines are the individual trees. Hollow points are out-of-bag for the selected tree.' },
+    { target: '#rg-panel-data .dataset-section', title: '3. Or generate data',
+      body: 'Choose a <b>pattern</b> (sine, line, parabola, steps, wiggly), set the <b>noise</b> and number of points, then press <b>New sample</b>.' },
+    { target: '#rg-panel-controls', title: '4. Set the forest\'s rules',
+      body: '<b>Trees</b> is how many to average. <b>Max Depth</b> and <b>Min Samples</b> control how many flat steps each tree gets. <b>Bootstrap size</b> is how much data each tree draws. Changing any setting resets the forest.' },
+    { target: '#rg-panel-controls .control-buttons', title: '5. Grow the forest',
+      body: '<b>Step-by-step</b> grows one tree. <b>Play until Convergence</b> keeps growing until the out-of-bag error stops improving. <b>Reset</b> starts over.' },
+    { target: '#rg-panel-model', title: '6. Read the model',
+      body: 'Each split asks "is x ≤ threshold?" and each leaf predicts the <b>mean y</b> of its points. Open <b>Forest Overview</b> to compare every tree\'s staircase with the forest average.' },
+    { target: '#rg-panel-loss', title: '7. Check the error',
+      body: '<b>RMSE</b> is the typical miss in units of y. <b>OOB</b> scores each tree on points it never saw. Hover, tap or use arrow keys on the chart to read each tree.' },
+    { target: null, title: 'You\'re set',
+      body: 'Try <b>Wiggly</b> with <b>High</b> noise: a depth-10 single tree chases the noise, but 30 of them average it away. Reopen this guide any time with <b>How to use</b>.' }
+  ];
+  let STEPS = CLS_STEPS;
+
   let idx = 0, lastFocus = null, open = false;
-  elDots.innerHTML = STEPS.map(() => '<i></i>').join('');
+  function loadSteps(){
+    STEPS = document.body.dataset.mode === 'regression' ? REG_STEPS : CLS_STEPS;
+    elDots.innerHTML = STEPS.map(() => '<i></i>').join('');
+  }
+  loadSteps();
 
   function lockPage(on){
-    ['.site-header', '.workspace', '.site-footer'].forEach(q => {
-      const el = document.querySelector(q);
-      if(el){ if(on) el.setAttribute('inert', ''); else el.removeAttribute('inert'); }
+    document.querySelectorAll('.site-header, .workspace, .site-footer').forEach(el => {
+      if(on) el.setAttribute('inert', ''); else el.removeAttribute('inert');
     });
   }
 
@@ -2261,6 +3059,7 @@
   function openTour(){
     if(open) return;
     open = true;
+    loadSteps();
     lastFocus = document.activeElement;
     tour.hidden = false;
     lockPage(true);
