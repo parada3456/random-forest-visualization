@@ -247,12 +247,28 @@
     display:inline-grid; place-items:center; width:20px; height:20px; border-radius:6px;
     background: var(--surface-3); color: var(--ink-dim); font:700 11px/1 "IBM Plex Mono", monospace;
   }
-  .axis-field select{
-    appearance:none; -webkit-appearance:none; background:transparent; border:0; outline:0; color: var(--ink);
-    font:600 12px/1 "IBM Plex Mono", monospace; padding:6px 16px 6px 0; margin:0; cursor:pointer; min-width:26px;
-    color-scheme: dark;
+  .axis-native{ position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; overflow:hidden; }
+  .axis-btn{
+    appearance:none; -webkit-appearance:none; background:transparent; border:0; outline:0; margin:0; cursor:pointer;
+    color: var(--ink); font:600 12px/1 "IBM Plex Mono", monospace; padding:6px 16px 6px 0; min-width:26px; text-align:left;
   }
-  .axis-field select option{ background: var(--surface); color: var(--ink); }
+  .axis-menu{
+    position:fixed; z-index:60; display:flex; flex-direction:column; gap:1px; padding:4px; outline:0;
+    background: var(--surface-2); border:1px solid var(--border-strong); border-radius:12px;
+    box-shadow: 0 16px 32px -12px rgba(0,0,0,0.75), 0 2px 8px rgba(0,0,0,0.45);
+    transform-origin: top left; animation: axisMenuIn .16s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .axis-menu[hidden]{ display:none; }
+  @keyframes axisMenuIn{ from{ opacity:0; transform: translateY(-4px) scale(0.97); } to{ opacity:1; transform:none; } }
+  .axis-opt{ display:flex; align-items:center; gap:10px; height:34px; padding:0 10px 0 8px; border-radius:8px; color: var(--ink-dim); cursor:pointer; user-select:none; }
+  .axis-opt.is-active{ background: var(--accent-soft); color: var(--ink); }
+  .axis-opt.is-selected{ color: var(--ink); }
+  .axis-opt-key{ min-width:24px; font:700 12px/1 "IBM Plex Mono", monospace; }
+  .axis-opt-name{ flex:1; font-size:12px; color: var(--ink-muted); white-space:nowrap; }
+  .axis-opt.is-active .axis-opt-name{ color: var(--ink-dim); }
+  .axis-opt-tag{ font-size:11px; line-height:1; padding:3px 7px; border-radius:999px; background: var(--surface-3); color: var(--ink-dim); white-space:nowrap; }
+  .axis-opt-check{ flex:none; color: var(--accent); }
+  @media (prefers-reduced-motion: reduce){ .axis-menu{ animation:none; } }
   .axis-chev{ position:absolute; right:8px; top:50%; margin-top:-5px; color: var(--ink-muted); pointer-events:none; }
   .axis-field:hover .axis-chev{ color: var(--ink); }
   @media (prefers-reduced-motion: reduce){ .view-seg .seg-thumb{ transition:none; } }
@@ -2438,6 +2454,7 @@
     btnView3d.title = has3 ? '' : 'Needs at least 3 features — raise Number of Features first';
     if(!has3 && state.viewMode === '3d') setViewMode('2d');
     updateAxisCaption();
+    syncAxisMenus();
   }
   function updateAxisCaption(){
     const a = state.axes;
@@ -2457,11 +2474,128 @@
     normalizeAxes();
     ['x','y','z'].forEach(k => { if(state.axes[k]) selAxis[k].value = state.axes[k]; });
     updateAxisCaption();
+    syncAxisMenus();
     bumpModelVersion();
     renderModelPanel();
     if(state.viewMode === '2d') fitViewToData(); else redrawCanvas();
   }
   ['x','y','z'].forEach(k => selAxis[k].addEventListener('change', () => onAxisChange(k)));
+
+  // ---------- Axis dropdown: custom listbox over the (hidden) native <select> ----------
+  const axisMenus = [];
+  const AXIS_CHECK = '<svg class="axis-opt-check" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2.5 6.5 5 9l4.5-5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function closeAxisMenus(except){ axisMenus.forEach(m => { if(m !== except) m.close(false); }); }
+  function enhanceAxisSelect(sel, axis){
+    const field = sel.closest('.axis-field');
+    sel.tabIndex = -1;
+    sel.setAttribute('aria-hidden', 'true');
+    sel.classList.add('axis-native');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'axis-btn';
+    btn.setAttribute('aria-haspopup', 'listbox');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-label', axis.toUpperCase() + ' axis feature');
+    field.insertBefore(btn, sel);
+    const menu = document.createElement('div');
+    menu.className = 'axis-menu';
+    menu.id = 'axisMenu' + axis.toUpperCase();
+    menu.hidden = true;
+    menu.tabIndex = -1;
+    menu.setAttribute('role', 'listbox');
+    menu.setAttribute('aria-label', axis.toUpperCase() + ' axis feature');
+    document.body.appendChild(menu);
+    btn.setAttribute('aria-controls', menu.id);
+
+    let active = 0;
+    const isOpen = () => !menu.hidden;
+    const opts = () => [...menu.querySelectorAll('.axis-opt')];
+    function sync(){
+      btn.textContent = sel.value;
+      if(isOpen()) render();
+    }
+    function render(){
+      menu.innerHTML = [...sel.options].map((o, i) => {
+        const k = o.value, on = k === sel.value;
+        const other = ['x', 'y', 'z'].find(a => a !== axis && state.axes[a] === k);
+        return `<div class="axis-opt${on ? ' is-selected' : ''}" role="option" id="${menu.id}-${i}" data-value="${k}" aria-selected="${on}"><span class="axis-opt-key">${k}</span><span class="axis-opt-name">${featureLabel(k)}</span>${other ? `<span class="axis-opt-tag">on ${other.toUpperCase()}</span>` : ''}${on ? AXIS_CHECK : ''}</div>`;
+      }).join('');
+      setActive(active);
+    }
+    function setActive(i){
+      const list = opts();
+      if(!list.length) return;
+      active = (i + list.length) % list.length;
+      list.forEach((el, j) => el.classList.toggle('is-active', j === active));
+      menu.setAttribute('aria-activedescendant', list[active].id);
+      list[active].scrollIntoView({ block: 'nearest' });
+    }
+    function place(){
+      const r = field.getBoundingClientRect();
+      menu.style.minWidth = Math.max(r.width, 188) + 'px';
+      const mw = menu.offsetWidth, mh = menu.offsetHeight;
+      const left = Math.max(8, Math.min(r.left, window.innerWidth - mw - 8));
+      let top = r.bottom + 6;
+      if(top + mh > window.innerHeight - 8 && r.top - mh - 6 > 8) top = r.top - mh - 6;
+      menu.style.left = left + 'px';
+      menu.style.top = top + 'px';
+    }
+    function open(){
+      closeAxisMenus(api);
+      active = Math.max(0, [...sel.options].findIndex(o => o.value === sel.value));
+      menu.hidden = false;
+      render();
+      place();
+      btn.setAttribute('aria-expanded', 'true');
+      menu.focus({ preventScroll: true });
+    }
+    function close(focusBtn){
+      if(!isOpen()) return;
+      menu.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+      if(focusBtn) btn.focus({ preventScroll: true });
+    }
+    function choose(value){
+      if(value !== sel.value){
+        sel.value = value;
+        sel.dispatchEvent(new Event('change'));
+      }
+      close(true);
+    }
+    btn.addEventListener('click', () => { isOpen() ? close(true) : open(); });
+    btn.addEventListener('keydown', (e) => {
+      if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){ e.preventDefault(); open(); }
+    });
+    menu.addEventListener('keydown', (e) => {
+      const k = e.key;
+      if(k === 'ArrowDown'){ e.preventDefault(); setActive(active + 1); }
+      else if(k === 'ArrowUp'){ e.preventDefault(); setActive(active - 1); }
+      else if(k === 'Home'){ e.preventDefault(); setActive(0); }
+      else if(k === 'End'){ e.preventDefault(); setActive(opts().length - 1); }
+      else if(k === 'Enter' || k === ' '){ e.preventDefault(); const el = opts()[active]; if(el) choose(el.dataset.value); }
+      else if(k === 'Escape'){ e.preventDefault(); close(true); }
+      else if(k === 'Tab'){ close(false); }
+    });
+    menu.addEventListener('pointermove', (e) => {
+      const el = e.target.closest('.axis-opt');
+      if(el) setActive(opts().indexOf(el));
+    });
+    menu.addEventListener('click', (e) => {
+      const el = e.target.closest('.axis-opt');
+      if(el) choose(el.dataset.value);
+    });
+    const api = { sync, close, isOpen, menu, btn };
+    axisMenus.push(api);
+    sync();
+    return api;
+  }
+  ['x', 'y', 'z'].forEach(k => enhanceAxisSelect(selAxis[k], k));
+  function syncAxisMenus(){ axisMenus.forEach(m => m.sync()); }
+  document.addEventListener('pointerdown', (e) => {
+    axisMenus.forEach(m => { if(m.isOpen() && !m.menu.contains(e.target) && !m.btn.contains(e.target)) m.close(false); });
+  });
+  window.addEventListener('resize', () => closeAxisMenus());
+  window.addEventListener('scroll', (e) => { if(e.target.closest && e.target.closest('.axis-menu')) return; closeAxisMenus(); }, true);
 
   function setSegActive(groupId, value){
     document.querySelectorAll('#' + groupId + ' .seg-btn').forEach(b => {
