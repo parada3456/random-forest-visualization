@@ -214,16 +214,17 @@
   .view-hint{ font-size:12px; color: var(--ink-dim); margin: 8px 0 0; }
   canvas.cv3d{ touch-action:none; cursor: grab; }
   canvas.cv3d:active{ cursor: grabbing; }
-  .view-bar{ display:flex; flex-direction:column; gap:8px; margin: 4px 0 14px; padding:10px 12px; border:1px solid var(--border-strong); border-radius:12px; background: var(--well); }
-  .view-bar-head{ display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 10px; }
-  .view-bar-title{ font-weight:700; color: var(--ink); font-size:var(--fs-ui); }
-  .view-bar-sub{ font-size:12px; color: var(--ink-dim); }
+  .view-bar{ position:absolute; top:10px; left:10px; right:84px; z-index:2; display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; pointer-events:none; }
+  .view-bar > *{ pointer-events:auto; background: rgba(11,11,9,0.72); border:1px solid var(--border-strong); border-radius:999px; backdrop-filter: blur(4px); padding:3px 4px; }
+  .view-bar .axis-pickers{ gap:4px 8px; padding:3px 8px; }
+  .view-bar .axis-pickers select{ padding:2px 4px; border-radius:6px; }
+  .view-bar .chips.seg .seg-btn{ width:auto; height:26px; min-width:38px; padding:0 10px; border-radius:999px; font-size:12px; }
   .canvas-badge{
     position:absolute; top:10px; right:10px; background: rgba(11,11,9,0.72);
     border:1px solid var(--border-strong); padding: 4px 10px; border-radius: 999px;
     font-size:12px; color: var(--ink-dim); backdrop-filter: blur(4px);
   }
-  .canvas-badge.zoom-badge{ right:auto; left:10px; font-family:"IBM Plex Mono",monospace; }
+  .canvas-badge.zoom-badge{ right:auto; left:10px; top:auto; bottom:10px; font-family:"IBM Plex Mono",monospace; }
   .canvas-zoom-controls{ position:absolute; bottom:10px; right:10px; display:flex; flex-direction:column; gap:6px; }
   .zoom-btn{
     width:30px; height:30px; border-radius:8px; background: rgba(11,11,9,0.72);
@@ -641,13 +642,11 @@
         
         
 
-        <div class="view-bar" role="group" aria-label="View settings">
-          <div class="view-bar-head"><span class="view-bar-title">View</span><span class="view-bar-sub">Applies to the Data Canvas and the Forest Overview</span></div>
-          <div class="tb-row"><span class="field-label" id="segViewLabel">Dimensions<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">2D plots two chosen features and shades the decision boundary as regions. 3D plots three chosen features in a rotatable cube and shows the boundary as faint colored cells. 3D needs at least 3 features (raise Number of Features below). Painting is 2D-only.</span></span></span><div class="chips seg" id="segView" role="radiogroup" aria-labelledby="segViewLabel"><button type="button" class="seg-btn active" role="radio" aria-checked="true" data-value="2d">2D</button><button type="button" class="seg-btn" role="radio" aria-checked="false" data-value="3d" id="btnView3d">3D</button></div></div>
-          <div class="tb-row"><span class="field-label" id="axesLabel">Axes</span><div class="axis-pickers" role="group" aria-labelledby="axesLabel"><label>X<select id="selAxisX"></select></label><label>Y<select id="selAxisY"></select></label><label id="lblAxisZ" hidden>Z<select id="selAxisZ"></select></label></div></div>
-        </div>
-
         <div class="canvas-wrap">
+          <div class="view-bar" role="group" aria-label="View settings: dimensions and axes">
+            <div class="chips seg" id="segView" role="radiogroup" aria-label="Dimensions"><button type="button" class="seg-btn active" role="radio" aria-checked="true" data-value="2d">2D</button><button type="button" class="seg-btn" role="radio" aria-checked="false" data-value="3d" id="btnView3d">3D</button></div>
+            <div class="axis-pickers" role="group" aria-label="Axes"><label>X<select id="selAxisX"></select></label><label>Y<select id="selAxisY"></select></label><label id="lblAxisZ" hidden>Z<select id="selAxisZ"></select></label></div>
+          </div>
           <canvas id="dataCanvas" tabindex="0" role="application" aria-label="Data canvas: add, erase and pan data points" aria-describedby="canvasKeys"></canvas>
           <canvas id="dataCanvas3d" class="cv3d" hidden tabindex="0" role="img" aria-label="3D scatter of the data points. Drag to rotate, scroll to zoom, double-click to reset."></canvas>
           <p id="canvasKeys" class="sr-only">Keyboard: arrow keys move the cursor, or pan the view when the Pan tool is selected. Enter or Space adds or erases at the cursor. Plus and minus zoom. Press 1, 2 or 3 to pick class A, B or C.</p>
@@ -2398,7 +2397,7 @@
   function updateViewNotes(){
     const a = state.axes, is3d = state.viewMode === '3d';
     const names = (is3d ? [a.x, a.y, a.z] : [a.x, a.y]).map(k => `<b>${k}</b>`).join(' × ');
-    document.getElementById('ovAxesNote').innerHTML = `Showing ${names} (${is3d ? '3D' : '2D'}) — same view as the Data Canvas; change it in the View bar.`;
+    document.getElementById('ovAxesNote').innerHTML = `Showing ${names} (${is3d ? '3D' : '2D'}) — same view as the Data Canvas; change it with the 2D/3D and axis controls on the Data Canvas.`;
   }
   function onAxisChange(which){
     const prev = state.axes[which];
