@@ -685,13 +685,9 @@
 
         <div class="param-group">
           <h3 class="section-title">Features</h3>
-          <div class="param">
-          <div class="param-text"><span class="param-label" id="lblFeatures">Number of Features (F)<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">This version always uses exactly two features: x and y, the two axes of the Data Canvas.</span></span></span><span class="param-sub">Splitting on <span class="value" id="valNumFeatures">x, y</span></span></div>
-          <div class="joined seg" id="segFeatures" aria-labelledby="lblFeatures"><button type="button" class="seg-btn active" disabled aria-disabled="true">2 (fixed)</button></div>
           <input type="hidden" id="inNumFeatures" value="2">
-        </div>
           <div class="param">
-            <span class="param-label"><label for="inFeatRandom">Random Feature Subspace</label><span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">A random subset of ⌈√F⌉ features is considered at each split, where F is the Number of Features above. This is the “random” in Random Forest; turning it off degrades the ensemble to plain bagging, where every split sees all F features instead.</span></span></span>
+            <span class="param-label"><label for="inFeatRandom">Random Feature Subspace</label><span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">A random subset of ⌈√F⌉ features is considered at each split, where F = 2 (x and y). This is the “random” in Random Forest; turning it off degrades the ensemble to plain bagging, where every split sees all F features instead.</span></span></span>
             <input type="checkbox" id="inFeatRandom" class="switch" checked>
           </div>
         </div>
@@ -1031,7 +1027,6 @@
   const pointCountEl = document.getElementById('pointCount');
 
   const inNumFeatures = document.getElementById('inNumFeatures');
-  const valNumFeatures = document.getElementById('valNumFeatures');
   const inNTrees = document.getElementById('inNTrees');
   const inMaxDepth = document.getElementById('inMaxDepth');
   const inMinSamples = document.getElementById('inMinSamples');
@@ -2297,13 +2292,6 @@
 
 
 
-  inNumFeatures.addEventListener('input', () => {
-    valNumFeatures.textContent = getFeatureKeys(+inNumFeatures.value).join(', ');
-  });
-  inNumFeatures.addEventListener('change', () => {
-    syncFeatureCount();
-    resetForest();
-  });
 
   function paintRange(input){
     const lo = +input.min, hi = +input.max;
@@ -2352,7 +2340,6 @@
   resizeCanvas();
   updateZoomBadge();
   readN();
-  valNumFeatures.textContent = getFeatureKeys(+inNumFeatures.value).join(', ');
   setData(generateDataset(state.pattern, +inTotalN.value, state.noise));
   renderLossChart();
   new ResizeObserver(() => renderLossChart()).observe(chartWrap);
