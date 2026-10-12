@@ -204,6 +204,14 @@
     border-radius: 12px; overflow:hidden; border:1px solid var(--border-strong); background: var(--well);
   }
   .canvas-wrap canvas{ display:block; width:100%; height:100%; cursor: crosshair; touch-action:none; }
+  .canvas-wrap canvas[hidden]{ display:none; }
+  .canvas-wrap canvas.cv3d{ cursor: grab; }
+  .canvas-wrap canvas.cv3d:active{ cursor: grabbing; }
+  .axis-pickers{ display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; }
+  .axis-pickers label{ display:inline-flex; align-items:center; gap:6px; font-size:var(--fs-ui); color: var(--ink-dim); }
+  .axis-pickers select{ background: var(--well); color: var(--ink); border:1px solid var(--border-strong); border-radius:8px; padding:5px 8px; font:inherit; }
+  .axis-pickers select:focus-visible{ outline:2px solid var(--accent-strong); outline-offset:2px; }
+  .view-hint{ font-size:12px; color: var(--ink-dim); margin: 8px 0 0; }
   .canvas-badge{
     position:absolute; top:10px; right:10px; background: rgba(11,11,9,0.72);
     border:1px solid var(--border-strong); padding: 4px 10px; border-radius: 999px;
@@ -619,6 +627,8 @@
             <button class="swatch swatch-b" data-cls="1" type="button" aria-label="Class B" title="Class B">B</button>
             <button class="swatch swatch-c" data-cls="2" type="button" aria-label="Class C" title="Class C">C</button>
           </div></div>
+          <div class="tb-row"><span class="field-label" id="segViewLabel">View<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">2D paints and shows the decision boundary on two chosen features. 3D shows the points on three chosen features and can be rotated by dragging; it needs at least 3 features (set Number of Features below). Painting and the boundary shading are 2D-only.</span></span></span><div class="chips seg" id="segView" role="radiogroup" aria-labelledby="segViewLabel"><button type="button" class="seg-btn active" role="radio" aria-checked="true" data-value="2d">2D</button><button type="button" class="seg-btn" role="radio" aria-checked="false" data-value="3d" id="btnView3d">3D</button></div></div>
+          <div class="tb-row"><span class="field-label" id="axesLabel">Axes</span><div class="axis-pickers" role="group" aria-labelledby="axesLabel"><label>X<select id="selAxisX"></select></label><label>Y<select id="selAxisY"></select></label><label id="lblAxisZ" hidden>Z<select id="selAxisZ"></select></label></div></div>
           <div class="tb-row"><span class="field-label" id="segBrushLabel">Brush size<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Click or drag on the canvas to paint points of the selected class inside this brush radius — just like the eraser, but adding instead of removing. A bigger brush spreads points over a wider area. The same size is used by Add and Erase.</span></span></span><div class="chips seg" id="segBrush" role="radiogroup" aria-labelledby="segBrushLabel"><button type="button" class="seg-btn" role="radio" aria-checked="false" data-value="10" aria-label="Small, 10 pixels" title="Small (10px)"><i class="seg-dot" style="--d:5px"></i></button><button type="button" class="seg-btn active" role="radio" aria-checked="true" data-value="18" aria-label="Medium, 18 pixels" title="Medium (18px)"><i class="seg-dot" style="--d:9px"></i></button><button type="button" class="seg-btn" role="radio" aria-checked="false" data-value="30" aria-label="Large, 30 pixels" title="Large (30px)"><i class="seg-dot" style="--d:14px"></i></button><button type="button" class="seg-btn" role="radio" aria-checked="false" data-value="50" aria-label="Extra large, 50 pixels" title="Extra large (50px)"><i class="seg-dot" style="--d:20px"></i></button></div></div>
           <div class="tb-row"><span class="field-label" id="segDensityLabel">Density<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">How many points get scattered per brush stamp. Higher density fills a cluster quickly and tightly; lower density spaces points out — drag slowly for finer control.</span></span></span><div class="stepper" role="group" aria-label="density"><button type="button" class="step-btn" data-dir="-1" data-inc="1" aria-label="Decrease density">−</button><input type="number" id="inAddDensity" min="1" max="12" step="1" value="3" inputmode="numeric"><button type="button" class="step-btn" data-dir="1" data-inc="1" aria-label="Increase density">+</button></div></div>
         </div>
@@ -629,16 +639,18 @@
 
         <div class="canvas-wrap">
           <canvas id="dataCanvas" tabindex="0" role="application" aria-label="Data canvas: add, erase and pan data points" aria-describedby="canvasKeys"></canvas>
+          <canvas id="dataCanvas3d" class="cv3d" hidden tabindex="0" role="img" aria-label="3D scatter of the data points. Drag to rotate, scroll to zoom, double-click to reset."></canvas>
           <p id="canvasKeys" class="sr-only">Keyboard: arrow keys move the cursor, or pan the view when the Pan tool is selected. Enter or Space adds or erases at the cursor. Plus and minus zoom. Press 1, 2 or 3 to pick class A, B or C.</p>
           <div class="canvas-badge" id="pointCount">N = 0</div>
           <div class="canvas-badge zoom-badge" id="zoomBadge">1.0×</div>
-          <div class="canvas-zoom-controls">
+          <div class="canvas-zoom-controls" id="zoomControls">
             <button class="zoom-btn" id="btnZoomIn" type="button" title="Zoom in">+</button>
             <button class="zoom-btn" id="btnZoomOut" type="button" title="Zoom out">−</button>
             <button class="zoom-btn" id="btnZoomReset" type="button" title="Fit view to all data">⤢</button>
           </div>
         </div>
-        <p class="axis-caption"><b>x</b> = Feature₁ &nbsp;·&nbsp; <b>y</b> = Feature₂ — shaded regions show the current ensemble's decision boundary, recomputed after every tree. The dashed outline is the <b>convex hull</b> of your training points; the darkened area outside it is <b>extrapolation</b> the forest was never trained on. <span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Every pixel is run through all trees built so far; each tree casts one vote for a class, and the pixel is shaded with whichever class wins the most votes. Outside the dashed hull, no bootstrap sample ever placed a point nearby — the forest's splits there are guesses, not evidence — so that region is dimmed ~40% as a trust cue.</span></span></p>
+        <p class="view-hint" id="view3dHint" hidden>3D view: <b>drag</b> to rotate, <b>scroll</b> to zoom, <b>double-click</b> to reset. Painting and the decision boundary are 2D-only — switch back to 2D to edit.</p>
+        <p class="axis-caption" id="axisCaption"><span id="capAxes"><b>x</b> = Feature₁ &nbsp;·&nbsp; <b>y</b> = Feature₂</span> — shaded regions show the current ensemble's decision boundary, recomputed after every tree. The dashed outline is the <b>convex hull</b> of your training points; the darkened area outside it is <b>extrapolation</b> the forest was never trained on. <span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Every pixel is run through all trees built so far; each tree casts one vote for a class, and the pixel is shaded with whichever class wins the most votes. Outside the dashed hull, no bootstrap sample ever placed a point nearby — the forest's splits there are guesses, not evidence — so that region is dimmed ~40% as a trust cue.</span></span></p>
 
         <div class="tb-section dataset-section">
           <h3 class="section-title">Dataset<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Total mode samples N points split evenly across classes A/B/C. Per Class mode lets you set an exact count for each class. Either way, "Add Random Points" appends the new points to whatever is already on the canvas — use "Clear All" first to start fresh.</span></span></h3>
@@ -1021,6 +1033,9 @@
     panStartClient: null,
     panStartView: null,
     view: { zoom: 1, cx: 0.5, cy: 0.5 },
+    axes: { x: 'x', y: 'y', z: 'f3' },
+    viewMode: '2d',
+    cam: { yaw: -0.65, pitch: 0.45, zoom: 1 },
     playing: false,
     playTimer: null
   };
@@ -1098,19 +1113,28 @@
     return a;
   }
   function ensurePointFeatures(p, keys){
+    ['x','y'].forEach(k => { if(p[k] === undefined) p[k] = Math.random(); });
     keys.forEach(k => { if(p[k] === undefined) p[k] = Math.random(); });
     Object.keys(p).forEach(k => {
       if(k !== 'x' && k !== 'y' && k !== 'cls' && !keys.includes(k)) delete p[k];
     });
   }
+  // The canvas shows the two features chosen in state.axes; (x, y) here are
+  // coordinates on those axes, and every other feature is filled randomly.
+  const ax = p => p[state.axes.x];
+  const ay = p => p[state.axes.y];
   function makeDataPoint(x, y, cls){
-    const p = { x, y, cls };
+    const p = { cls };
+    p[state.axes.x] = x;
+    p[state.axes.y] = y;
     ensurePointFeatures(p, getExtraFeatureKeys());
     return p;
   }
   function makeGridPoint(x, y){
-    const p = { x, y };
+    const p = { x: 0.5, y: 0.5 };
     getExtraFeatureKeys().forEach(k => { p[k] = 0.5; });
+    p[state.axes.x] = x;
+    p[state.axes.y] = y;
     return p;
   }
   function syncFeatureCount(){
@@ -1471,7 +1495,7 @@
   // forest's predictions out there are pure extrapolation — nothing in the
   // bootstrap samples ever informed a split all the way out there.
   function drawHullDim(c, W, H, toPixel, showOutline){
-    const hull = convexHull(state.data);
+    const hull = convexHull(state.data.map(p => ({ x: ax(p), y: ay(p) })));
     if(!hull) return;
     const hp = hull.map(p => toPixel(p.x, p.y));
     c.save();
@@ -1504,6 +1528,7 @@
     requestAnimationFrame(() => { redrawQueued = false; redrawCanvas(); });
   }
   function redrawCanvas(){
+    if(state.viewMode === '3d'){ redraw3d(); return; }
     const rect = canvas.getBoundingClientRect();
     const W = rect.width, H = rect.height;
     ctx.clearRect(0, 0, W, H);
@@ -1535,7 +1560,7 @@
 
     // points
     for(const p of state.data){
-      const pt = dataToPixel(p.x, p.y, W, H);
+      const pt = dataToPixel(ax(p), ay(p), W, H);
       ctx.beginPath();
       ctx.arc(pt.x, pt.y, 6, 0, Math.PI*2);
       ctx.fillStyle = CLASS_COLORS[p.cls];
@@ -1580,7 +1605,7 @@
     const ppdu = pixelsPerDataUnit(rect.width);
     const before = state.data.length;
     state.data = state.data.filter(p => {
-      const dx = (p.x-xData)*ppdu, dy = (p.y-yData)*ppdu;
+      const dx = (ax(p)-xData)*ppdu, dy = (ay(p)-yData)*ppdu;
       return Math.sqrt(dx*dx + dy*dy) > state.eraserSize;
     });
     if(state.data.length !== before){
@@ -1739,10 +1764,11 @@
   function computeDataBounds(){
     let minX = 0, maxX = 1, minY = 0, maxY = 1;
     for(const p of state.data){
-      if(p.x < minX) minX = p.x;
-      if(p.x > maxX) maxX = p.x;
-      if(p.y < minY) minY = p.y;
-      if(p.y > maxY) maxY = p.y;
+      const px = ax(p), py = ay(p);
+      if(px < minX) minX = px;
+      if(px > maxX) maxX = px;
+      if(py < minY) minY = py;
+      if(py > maxY) maxY = py;
     }
     const span = Math.max(maxX-minX, maxY-minY) * 1.2 || 1;
     const cx = (minX+maxX)/2, cy = (minY+maxY)/2;
@@ -1769,7 +1795,7 @@
     const {x,y} = canvasPointFromEvent(e);
     let bestI = -1, bestD = Infinity;
     state.data.forEach((p,i) => {
-      const dx = (p.x-x)*ppdu, dy = (p.y-y)*ppdu;
+      const dx = (ax(p)-x)*ppdu, dy = (ay(p)-y)*ppdu;
       const d = dx*dx+dy*dy;
       if(d < bestD){ bestD = d; bestI = i; }
     });
@@ -1930,8 +1956,8 @@
     }), !small);
     const r = small ? 1.6 : 3;
     for(const p of state.data){
-      const px = (p.x-b.minX)/(b.maxX-b.minX)*W;
-      const py = (p.y-b.minY)/(b.maxY-b.minY)*H;
+      const px = (ax(p)-b.minX)/(b.maxX-b.minX)*W;
+      const py = (ay(p)-b.minY)/(b.maxY-b.minY)*H;
       c.beginPath();
       c.arc(px, py, r, 0, Math.PI*2);
       c.fillStyle = CLASS_COLORS[p.cls];
@@ -2306,9 +2332,187 @@
     valNumFeatures.textContent = getFeatureKeys(+inNumFeatures.value).join(', ');
   });
   inNumFeatures.addEventListener('change', () => {
+    refreshAxisOptions();
     syncFeatureCount();
     resetForest();
   });
+
+
+  // ---------- View: axis pickers + 2D / 3D toggle ----------
+  const selAxis = { x: document.getElementById('selAxisX'), y: document.getElementById('selAxisY'), z: document.getElementById('selAxisZ') };
+  const lblAxisZ = document.getElementById('lblAxisZ');
+  const btnView3d = document.getElementById('btnView3d');
+  const canvas3d = document.getElementById('dataCanvas3d');
+  const ctx3d = canvas3d.getContext('2d');
+  const zoomControls = document.getElementById('zoomControls');
+  const view3dHint = document.getElementById('view3dHint');
+  const capAxes = document.getElementById('capAxes');
+  const SUB = '₀₁₂₃₄₅₆₇₈₉';
+
+  function featureLabel(key){
+    const i = getFeatureKeys().indexOf(key) + 1;
+    return 'Feature' + String(i).split('').map(d => SUB[+d]).join('');
+  }
+  // Keeps x / y / z valid and pairwise distinct for the current feature count.
+  function normalizeAxes(){
+    const keys = getFeatureKeys(), a = state.axes, used = [];
+    ['x','y','z'].forEach(k => {
+      let v = a[k];
+      if(!keys.includes(v) || used.includes(v)) v = keys.find(c => !used.includes(c)) || null;
+      a[k] = v;
+      if(v) used.push(v);
+    });
+  }
+  function refreshAxisOptions(){
+    normalizeAxes();
+    const keys = getFeatureKeys();
+    ['x','y','z'].forEach(k => {
+      selAxis[k].innerHTML = keys.map(c => `<option value="${c}">${c}</option>`).join('');
+      if(state.axes[k]) selAxis[k].value = state.axes[k];
+    });
+    const has3 = keys.length >= 3;
+    btnView3d.disabled = !has3;
+    btnView3d.title = has3 ? '' : 'Needs at least 3 features — raise Number of Features first';
+    if(!has3 && state.viewMode === '3d') setViewMode('2d');
+    updateAxisCaption();
+  }
+  function updateAxisCaption(){
+    const a = state.axes;
+    capAxes.innerHTML = `<b>${a.x}</b> = ${featureLabel(a.x)} &nbsp;·&nbsp; <b>${a.y}</b> = ${featureLabel(a.y)}`;
+  }
+  function onAxisChange(which){
+    const prev = state.axes[which];
+    const next = selAxis[which].value;
+    ['x','y','z'].forEach(k => { if(k !== which && state.axes[k] === next) state.axes[k] = prev; });
+    state.axes[which] = next;
+    normalizeAxes();
+    ['x','y','z'].forEach(k => { if(state.axes[k]) selAxis[k].value = state.axes[k]; });
+    updateAxisCaption();
+    bumpModelVersion();
+    renderModelPanel();
+    if(state.viewMode === '2d') fitViewToData(); else redrawCanvas();
+  }
+  ['x','y','z'].forEach(k => selAxis[k].addEventListener('change', () => onAxisChange(k)));
+
+  function setSegActive(groupId, value){
+    document.querySelectorAll('#' + groupId + ' .seg-btn').forEach(b => {
+      const on = b.dataset.value === value;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-checked', String(on));
+      b.tabIndex = on ? 0 : -1;
+    });
+  }
+  function setViewMode(mode){
+    if(mode === '3d' && getFeatureKeys().length < 3){ mode = '2d'; setSegActive('segView', '2d'); }
+    stopPlaying();
+    state.viewMode = mode;
+    const is3d = mode === '3d';
+    canvas.hidden = is3d;
+    canvas3d.hidden = !is3d;
+    zoomControls.hidden = is3d;
+    zoomBadge.hidden = is3d;
+    lblAxisZ.hidden = !is3d;
+    view3dHint.hidden = !is3d;
+    if(!is3d) resizeCanvas();
+    redrawCanvas();
+  }
+  bindSegmented('segView', v => setViewMode(v));
+
+  // ---------- 3D scatter (read-only orbit view) ----------
+  const CAM_DEFAULT = { yaw: -0.65, pitch: 0.45, zoom: 1 };
+  function project3d(u, v, w, W, H){
+    const c = state.cam;
+    const x = u - 0.5, y = v - 0.5, z = w - 0.5;
+    const cy = Math.cos(c.yaw), sy = Math.sin(c.yaw), cp = Math.cos(c.pitch), sp = Math.sin(c.pitch);
+    const x1 = x * cy - y * sy, y1 = x * sy + y * cy;
+    const y2 = y1 * cp - z * sp, z2 = y1 * sp + z * cp;
+    const D = 2.6, s = D / (D + y2);
+    const R = Math.min(W, H) * 0.5 * c.zoom;
+    return { x: W / 2 + x1 * s * R, y: H / 2 - z2 * s * R, depth: y2, s };
+  }
+  function redraw3d(){
+    const rect = canvas3d.getBoundingClientRect();
+    const W = rect.width, H = rect.height;
+    if(!W || !H) return;
+    const dpr = window.devicePixelRatio || 1;
+    if(canvas3d.width !== Math.round(W * dpr) || canvas3d.height !== Math.round(H * dpr)){
+      canvas3d.width = Math.round(W * dpr);
+      canvas3d.height = Math.round(H * dpr);
+    }
+    const c = ctx3d;
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.clearRect(0, 0, W, H);
+    const pr = (u, v, w) => project3d(u, v, w, W, H);
+
+    // cube wireframe
+    const corners = [];
+    for(let i = 0; i < 8; i++) corners.push(pr(i & 1, (i >> 1) & 1, (i >> 2) & 1));
+    c.strokeStyle = 'rgba(255,255,255,0.10)';
+    c.lineWidth = 1;
+    for(let i = 0; i < 8; i++){
+      for(let b = 0; b < 3; b++){
+        const j = i ^ (1 << b);
+        if(j > i){ c.beginPath(); c.moveTo(corners[i].x, corners[i].y); c.lineTo(corners[j].x, corners[j].y); c.stroke(); }
+      }
+    }
+    // axes from the origin corner, with labels
+    const o = pr(0, 0, 0);
+    const axisDefs = [['x', pr(1, 0, 0)], ['y', pr(0, 1, 0)], ['z', pr(0, 0, 1)]];
+    c.font = '600 12px system-ui, sans-serif';
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    for(const [k, e] of axisDefs){
+      c.strokeStyle = 'rgba(236,232,219,0.55)';
+      c.lineWidth = 1.6;
+      c.beginPath(); c.moveTo(o.x, o.y); c.lineTo(e.x, e.y); c.stroke();
+      const dx = e.x - o.x, dy = e.y - o.y, len = Math.hypot(dx, dy) || 1;
+      c.fillStyle = '#ece8db';
+      c.fillText(state.axes[k] || '', e.x + dx / len * 12, e.y + dy / len * 12);
+    }
+
+    // points, far to near
+    const pts = state.data.map(d => ({ d, q: pr(d[state.axes.x], d[state.axes.y], d[state.axes.z]) }));
+    pts.sort((a, b) => b.q.depth - a.q.depth);
+    for(const { d, q } of pts){
+      c.beginPath();
+      c.arc(q.x, q.y, Math.max(2.5, 6 * q.s), 0, Math.PI * 2);
+      c.fillStyle = CLASS_COLORS[d.cls];
+      c.fill();
+      c.lineWidth = 1.5;
+      c.strokeStyle = '#0b0b09';
+      c.stroke();
+    }
+  }
+  (function bind3dControls(){
+    let drag = null;
+    canvas3d.addEventListener('pointerdown', (e) => {
+      try{ canvas3d.setPointerCapture(e.pointerId); }catch(err){}
+      drag = { x: e.clientX, y: e.clientY };
+    });
+    canvas3d.addEventListener('pointermove', (e) => {
+      if(!drag) return;
+      state.cam.yaw += (e.clientX - drag.x) * 0.01;
+      state.cam.pitch = Math.max(-1.5, Math.min(1.5, state.cam.pitch + (e.clientY - drag.y) * 0.01));
+      drag = { x: e.clientX, y: e.clientY };
+      redraw3d();
+    });
+    const end = () => { drag = null; };
+    canvas3d.addEventListener('pointerup', end);
+    canvas3d.addEventListener('pointercancel', end);
+    canvas3d.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      state.cam.zoom = Math.max(0.5, Math.min(3, state.cam.zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1)));
+      redraw3d();
+    }, { passive: false });
+    canvas3d.addEventListener('dblclick', () => { Object.assign(state.cam, CAM_DEFAULT); redraw3d(); });
+    canvas3d.addEventListener('keydown', (e) => {
+      const d = { ArrowLeft: [-0.1, 0], ArrowRight: [0.1, 0], ArrowUp: [0, -0.1], ArrowDown: [0, 0.1] }[e.key];
+      if(!d) return;
+      e.preventDefault();
+      state.cam.yaw += d[0];
+      state.cam.pitch = Math.max(-1.5, Math.min(1.5, state.cam.pitch + d[1]));
+      redraw3d();
+    });
+  })();
 
   function paintRange(input){
     const lo = +input.min, hi = +input.max;
@@ -2358,6 +2562,7 @@
   updateZoomBadge();
   readN();
   valNumFeatures.textContent = getFeatureKeys(+inNumFeatures.value).join(', ');
+  refreshAxisOptions();
   setData(generateDataset(state.pattern, +inTotalN.value, state.noise));
   renderLossChart();
   new ResizeObserver(() => renderLossChart()).observe(chartWrap);
