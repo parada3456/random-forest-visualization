@@ -23,6 +23,20 @@ A random forest grows many decision trees, each on a **bootstrap sample** of the
 
 The Data Canvas shows the decision boundary (classification) or the prediction curve (regression) and updates after every tree. Switch between **Classification** and **Regression** in the header. The **How to use** button starts a guided tour.
 
+## Versions
+
+`main` and the live demo always show the **2-feature** version. The other versions are kept as tags; check one out (or download it from its tag page) to open it locally.
+
+| Version | Features | Views | Where |
+|---|---|---|---|
+| [`v1.1.0`](https://github.com/parada3456/random-forest-visualization/tree/v1.1.0) | Always 2 (x, y), not changeable | 2D | `main`, live demo |
+| [`v1.0.0`](https://github.com/parada3456/random-forest-visualization/tree/v1.0.0) | 2 to 6 (extra features are random noise) | 2D, on x and y only | tag |
+| [`v1.2.0`](https://github.com/parada3456/random-forest-visualization/tree/v1.2.0) | 2 to 6 | 2D or 3D, with a choice of which 2 or 3 features to plot; the decision boundary is shown in both | tag, branch `feature/3d-multifeature` |
+
+```bash
+git checkout v1.2.0   # or v1.0.0 / v1.1.0, then open index.html
+```
+
 ## Run locally
 
 No build step or dependencies. Open `index.html` in a browser.
