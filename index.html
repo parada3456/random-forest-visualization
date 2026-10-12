@@ -686,8 +686,8 @@
         <div class="param-group">
           <h3 class="section-title">Features</h3>
           <div class="param">
-          <div class="param-text"><span class="param-label" id="lblFeatures">Number of Features (F)<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Only x and y are plotted spatially. Extra features (f₃, f₄, …) are independent random noise, unrelated to the class label — they exist so "random feature subspace" below has more to pick from, showing how a forest resists being fooled by useless features. The Data Canvas boundary is drawn holding any noise features at their average value (0.5).</span></span></span><span class="param-sub">Splitting on <span class="value" id="valNumFeatures">x, y</span></span></div>
-          <div class="joined seg" id="segFeatures" role="radiogroup" aria-labelledby="lblFeatures"><button type="button" class="seg-btn active" role="radio" aria-checked="true" data-value="2">2</button><button type="button" class="seg-btn" role="radio" aria-checked="false" data-value="3">3</button><button type="button" class="seg-btn" role="radio" aria-checked="false" data-value="4">4</button><button type="button" class="seg-btn" role="radio" aria-checked="false" data-value="5">5</button><button type="button" class="seg-btn" role="radio" aria-checked="false" data-value="6">6</button></div>
+          <div class="param-text"><span class="param-label" id="lblFeatures">Number of Features (F)<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">This version always uses exactly two features: x and y, the two axes of the Data Canvas.</span></span></span><span class="param-sub">Splitting on <span class="value" id="valNumFeatures">x, y</span></span></div>
+          <div class="joined seg" id="segFeatures" aria-labelledby="lblFeatures"><button type="button" class="seg-btn active" disabled aria-disabled="true">2 (fixed)</button></div>
           <input type="hidden" id="inNumFeatures" value="2">
         </div>
           <div class="param">
@@ -2297,11 +2297,6 @@
 
 
 
-  bindSegmented('segFeatures', v => {
-    inNumFeatures.value = v;
-    inNumFeatures.dispatchEvent(new Event('input'));
-    inNumFeatures.dispatchEvent(new Event('change'));
-  });
   inNumFeatures.addEventListener('input', () => {
     valNumFeatures.textContent = getFeatureKeys(+inNumFeatures.value).join(', ');
   });
