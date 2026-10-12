@@ -212,6 +212,12 @@
   .axis-pickers select{ background: var(--well); color: var(--ink); border:1px solid var(--border-strong); border-radius:8px; padding:5px 8px; font:inherit; }
   .axis-pickers select:focus-visible{ outline:2px solid var(--accent-strong); outline-offset:2px; }
   .view-hint{ font-size:12px; color: var(--ink-dim); margin: 8px 0 0; }
+  canvas.cv3d{ touch-action:none; cursor: grab; }
+  canvas.cv3d:active{ cursor: grabbing; }
+  .view-bar{ display:flex; flex-direction:column; gap:8px; margin: 4px 0 14px; padding:10px 12px; border:1px solid var(--border-strong); border-radius:12px; background: var(--well); }
+  .view-bar-head{ display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 10px; }
+  .view-bar-title{ font-weight:700; color: var(--ink); font-size:var(--fs-ui); }
+  .view-bar-sub{ font-size:12px; color: var(--ink-dim); }
   .canvas-badge{
     position:absolute; top:10px; right:10px; background: rgba(11,11,9,0.72);
     border:1px solid var(--border-strong); padding: 4px 10px; border-radius: 999px;
@@ -627,8 +633,6 @@
             <button class="swatch swatch-b" data-cls="1" type="button" aria-label="Class B" title="Class B">B</button>
             <button class="swatch swatch-c" data-cls="2" type="button" aria-label="Class C" title="Class C">C</button>
           </div></div>
-          <div class="tb-row"><span class="field-label" id="segViewLabel">View<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">2D paints and shows the decision boundary on two chosen features. 3D shows the points on three chosen features and can be rotated by dragging; it needs at least 3 features (set Number of Features below). Painting and the boundary shading are 2D-only.</span></span></span><div class="chips seg" id="segView" role="radiogroup" aria-labelledby="segViewLabel"><button type="button" class="seg-btn active" role="radio" aria-checked="true" data-value="2d">2D</button><button type="button" class="seg-btn" role="radio" aria-checked="false" data-value="3d" id="btnView3d">3D</button></div></div>
-          <div class="tb-row"><span class="field-label" id="axesLabel">Axes</span><div class="axis-pickers" role="group" aria-labelledby="axesLabel"><label>X<select id="selAxisX"></select></label><label>Y<select id="selAxisY"></select></label><label id="lblAxisZ" hidden>Z<select id="selAxisZ"></select></label></div></div>
           <div class="tb-row"><span class="field-label" id="segBrushLabel">Brush size<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Click or drag on the canvas to paint points of the selected class inside this brush radius — just like the eraser, but adding instead of removing. A bigger brush spreads points over a wider area. The same size is used by Add and Erase.</span></span></span><div class="chips seg" id="segBrush" role="radiogroup" aria-labelledby="segBrushLabel"><button type="button" class="seg-btn" role="radio" aria-checked="false" data-value="10" aria-label="Small, 10 pixels" title="Small (10px)"><i class="seg-dot" style="--d:5px"></i></button><button type="button" class="seg-btn active" role="radio" aria-checked="true" data-value="18" aria-label="Medium, 18 pixels" title="Medium (18px)"><i class="seg-dot" style="--d:9px"></i></button><button type="button" class="seg-btn" role="radio" aria-checked="false" data-value="30" aria-label="Large, 30 pixels" title="Large (30px)"><i class="seg-dot" style="--d:14px"></i></button><button type="button" class="seg-btn" role="radio" aria-checked="false" data-value="50" aria-label="Extra large, 50 pixels" title="Extra large (50px)"><i class="seg-dot" style="--d:20px"></i></button></div></div>
           <div class="tb-row"><span class="field-label" id="segDensityLabel">Density<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">How many points get scattered per brush stamp. Higher density fills a cluster quickly and tightly; lower density spaces points out — drag slowly for finer control.</span></span></span><div class="stepper" role="group" aria-label="density"><button type="button" class="step-btn" data-dir="-1" data-inc="1" aria-label="Decrease density">−</button><input type="number" id="inAddDensity" min="1" max="12" step="1" value="3" inputmode="numeric"><button type="button" class="step-btn" data-dir="1" data-inc="1" aria-label="Increase density">+</button></div></div>
         </div>
@@ -636,6 +640,12 @@
         
         
         
+
+        <div class="view-bar" role="group" aria-label="View settings">
+          <div class="view-bar-head"><span class="view-bar-title">View</span><span class="view-bar-sub">Applies to the Data Canvas and the Forest Overview</span></div>
+          <div class="tb-row"><span class="field-label" id="segViewLabel">Dimensions<span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">2D plots two chosen features and shades the decision boundary as regions. 3D plots three chosen features in a rotatable cube and shows the boundary as faint colored cells. 3D needs at least 3 features (raise Number of Features below). Painting is 2D-only.</span></span></span><div class="chips seg" id="segView" role="radiogroup" aria-labelledby="segViewLabel"><button type="button" class="seg-btn active" role="radio" aria-checked="true" data-value="2d">2D</button><button type="button" class="seg-btn" role="radio" aria-checked="false" data-value="3d" id="btnView3d">3D</button></div></div>
+          <div class="tb-row"><span class="field-label" id="axesLabel">Axes</span><div class="axis-pickers" role="group" aria-labelledby="axesLabel"><label>X<select id="selAxisX"></select></label><label>Y<select id="selAxisY"></select></label><label id="lblAxisZ" hidden>Z<select id="selAxisZ"></select></label></div></div>
+        </div>
 
         <div class="canvas-wrap">
           <canvas id="dataCanvas" tabindex="0" role="application" aria-label="Data canvas: add, erase and pan data points" aria-describedby="canvasKeys"></canvas>
@@ -649,7 +659,7 @@
             <button class="zoom-btn" id="btnZoomReset" type="button" title="Fit view to all data">⤢</button>
           </div>
         </div>
-        <p class="view-hint" id="view3dHint" hidden>3D view: <b>drag</b> to rotate, <b>scroll</b> to zoom, <b>double-click</b> to reset. Painting and the decision boundary are 2D-only — switch back to 2D to edit.</p>
+        <p class="view-hint" id="view3dHint" hidden>3D view: <b>drag</b> to rotate, <b>scroll</b> to zoom, <b>double-click</b> to reset. Faint colored cells are the forest's decision regions (features not on an axis are held at 0.5). Painting is 2D-only — switch back to 2D to edit.</p>
         <p class="axis-caption" id="axisCaption"><span id="capAxes"><b>x</b> = Feature₁ &nbsp;·&nbsp; <b>y</b> = Feature₂</span> — shaded regions show the current ensemble's decision boundary, recomputed after every tree. The dashed outline is the <b>convex hull</b> of your training points; the darkened area outside it is <b>extrapolation</b> the forest was never trained on. <span class="info-tip icon" tabindex="0">ⓘ<span class="tip-bubble">Every pixel is run through all trees built so far; each tree casts one vote for a class, and the pixel is shaded with whichever class wins the most votes. Outside the dashed hull, no bootstrap sample ever placed a point nearby — the forest's splits there are guesses, not evidence — so that region is dimmed ~40% as a trust cue.</span></span></p>
 
         <div class="tb-section dataset-section">
@@ -773,6 +783,7 @@
         <div id="modelOverviewView" hidden>
           <p class="panel-hint" style="margin-bottom:6px;">Click a tile to see that tree large, or use the toggle for the final forest. Each tile is one tree's own decision boundary.<span class="explain-more" id="forestOverviewMore" hidden> Trained on only its own bootstrap sample. The highlighted tile combines all of them by majority vote — the forest's actual output, identical to the boundary shown on the Data Canvas.</span></p>
           <button aria-expanded="false" class="explain-toggle" type="button" data-target="forestOverviewMore" style="margin-bottom:12px;">Show more</button>
+          <p class="view-hint" id="ovAxesNote" style="margin:0 0 10px;"></p>
           <div class="ov-viewer" id="clsOvViewer" hidden>
             <div class="joined" role="group" aria-label="Overview viewer"><button type="button" class="active" data-ov="tree" id="clsOvTreeBtn">Tree</button><button type="button" data-ov="final">Final forest</button></div>
             <canvas id="clsOvCanvas" width="380" height="380"></canvas>
@@ -1039,6 +1050,8 @@
     playing: false,
     playTimer: null
   };
+
+  const vox3dCache = new Map();
 
   // ---------- DOM refs ----------
   const canvas = document.getElementById('dataCanvas');
@@ -1936,7 +1949,8 @@
     renderTreeSvg(state.trees[state.selectedTreeIdx]);
   }
 
-  function drawMiniBoundary(c, predictFn, W, H, gridN, small, b){
+  function drawMiniBoundary(c, predictFn, W, H, gridN, small, b, id3){
+    if(state.viewMode === '3d'){ drawScene3d(c, predictFn, W, H, { id: id3, small }); return; }
     c.clearRect(0, 0, W, H);
     const cw = W/gridN, ch = H/gridN;
     for(let gy=0; gy<gridN; gy++){
@@ -1981,11 +1995,11 @@
     ).join('');
     forestGrid.querySelectorAll('canvas').forEach(cv => {
       const i = +cv.dataset.idx;
-      drawMiniBoundary(cv.getContext('2d'), (pt) => predictTree(state.trees[i], pt), 112, 112, 20, true, bounds);
+      drawMiniBoundary(cv.getContext('2d'), (pt) => predictTree(state.trees[i], pt), 112, 112, 20, true, bounds, 'tree' + i);
     });
     finalTile.innerHTML = `<canvas id="finalCanvas" width="240" height="240"></canvas><span>Majority Vote — Final Forest Prediction (T = ${T})</span>`;
     const fc = document.getElementById('finalCanvas').getContext('2d');
-    drawMiniBoundary(fc, (pt) => ensemblePredict(pt, state.trees), 240, 240, 48, false, bounds);
+    drawMiniBoundary(fc, (pt) => ensemblePredict(pt, state.trees), 240, 240, 48, false, bounds, 'final');
     drawOvViewer(bounds);
   }
   let ovFinal = true;
@@ -2000,8 +2014,8 @@
     treeBtn.classList.toggle('active', !ovFinal);
     v.querySelector('[data-ov=final]').classList.toggle('active', ovFinal);
     const c = document.getElementById('clsOvCanvas').getContext('2d');
-    if(ovFinal) drawMiniBoundary(c, pt => ensemblePredict(pt, state.trees), 380, 380, 64, false, bounds);
-    else drawMiniBoundary(c, pt => predictTree(state.trees[i], pt), 380, 380, 64, false, bounds);
+    if(ovFinal) drawMiniBoundary(c, pt => ensemblePredict(pt, state.trees), 380, 380, 64, false, bounds, 'final');
+    else drawMiniBoundary(c, pt => predictTree(state.trees[i], pt), 380, 380, 64, false, bounds, 'treeBig' + i);
     document.getElementById('clsOvCaption').textContent = ovFinal ? `Final forest — majority vote of ${T} trees` : `Tree ${i + 1} alone — trained on its own bootstrap sample`;
     forestGrid.querySelectorAll('.forest-cell').forEach((el, k) => el.classList.toggle('is-picked', !ovFinal && k === i));
   }
@@ -2379,6 +2393,12 @@
   function updateAxisCaption(){
     const a = state.axes;
     capAxes.innerHTML = `<b>${a.x}</b> = ${featureLabel(a.x)} &nbsp;·&nbsp; <b>${a.y}</b> = ${featureLabel(a.y)}`;
+    updateViewNotes();
+  }
+  function updateViewNotes(){
+    const a = state.axes, is3d = state.viewMode === '3d';
+    const names = (is3d ? [a.x, a.y, a.z] : [a.x, a.y]).map(k => `<b>${k}</b>`).join(' × ');
+    document.getElementById('ovAxesNote').innerHTML = `Showing ${names} (${is3d ? '3D' : '2D'}) — same view as the Data Canvas; change it in the View bar.`;
   }
   function onAxisChange(which){
     const prev = state.axes[which];
@@ -2413,22 +2433,101 @@
     zoomBadge.hidden = is3d;
     lblAxisZ.hidden = !is3d;
     view3dHint.hidden = !is3d;
+    document.getElementById('clsOvCanvas').classList.toggle('cv3d', is3d);
+    updateViewNotes();
     if(!is3d) resizeCanvas();
     redrawCanvas();
+    renderForestOverview();
   }
   bindSegmented('segView', v => setViewMode(v));
 
-  // ---------- 3D scatter (read-only orbit view) ----------
+  // ---------- 3D scene (data points + decision regions) ----------
   const CAM_DEFAULT = { yaw: -0.65, pitch: 0.45, zoom: 1 };
-  function project3d(u, v, w, W, H){
+  function project3d(u, v, w, W, H, zm){
     const c = state.cam;
     const x = u - 0.5, y = v - 0.5, z = w - 0.5;
     const cy = Math.cos(c.yaw), sy = Math.sin(c.yaw), cp = Math.cos(c.pitch), sp = Math.sin(c.pitch);
     const x1 = x * cy - y * sy, y1 = x * sy + y * cy;
     const y2 = y1 * cp - z * sp, z2 = y1 * sp + z * cp;
     const D = 2.6, s = D / (D + y2);
-    const R = Math.min(W, H) * 0.5 * c.zoom;
-    return { x: W / 2 + x1 * s * R, y: H / 2 - z2 * s * R, depth: y2, s };
+    const R = Math.min(W, H) * 0.5 * c.zoom * (zm || 1);
+    return { x: W / 2 + x1 * s * R, y: H / 2 - z2 * s * R, depth: y2, s, R };
+  }
+  function makeGridPoint3(u, v, w){
+    const p = makeGridPoint(0.5, 0.5);
+    p[state.axes.x] = u; p[state.axes.y] = v; p[state.axes.z] = w;
+    return p;
+  }
+  // Class predicted at the centre of every cell of an n×n×n grid over the unit cube,
+  // cached per (canvas id, model version, axes, n) so rotating only re-projects.
+  function voxels3d(id, n, predictFn){
+    const a = state.axes;
+    const key = modelVersion + '|' + a.x + a.y + a.z + '|' + n;
+    const hit = vox3dCache.get(id);
+    if(hit && hit.key === key) return hit.list;
+    const list = [];
+    for(let i = 0; i < n; i++) for(let j = 0; j < n; j++) for(let k = 0; k < n; k++){
+      const u = (i + 0.5) / n, v = (j + 0.5) / n, w = (k + 0.5) / n;
+      list.push({ u, v, w, cls: predictFn(makeGridPoint3(u, v, w)) });
+    }
+    vox3dCache.set(id, { key, list });
+    return list;
+  }
+  function drawScene3d(c, predictFn, W, H, o){
+    const small = !!o.small;
+    const n = o.n || (small ? 7 : 13);
+    const zm = small ? 0.84 : 1;
+    const pr = (u, v, w) => project3d(u, v, w, W, H, zm);
+    c.clearRect(0, 0, W, H);
+
+    // decision regions: faint class-colored cells, far to near
+    if(predictFn && state.trees.length){
+      const cells = voxels3d(o.id || 'anon', n, predictFn).map(v => ({ v, q: pr(v.u, v.v, v.w) }));
+      cells.sort((p, q) => q.q.depth - p.q.depth);
+      c.globalAlpha = Math.min(0.26, Math.max(0.07, 1.9 / n));
+      for(const { v, q } of cells){
+        const side = q.R * q.s / n * 1.18;
+        c.fillStyle = CLASS_COLORS[v.cls];
+        c.fillRect(q.x - side / 2, q.y - side / 2, side, side);
+      }
+      c.globalAlpha = 1;
+    }
+
+    // cube wireframe
+    const corners = [];
+    for(let i = 0; i < 8; i++) corners.push(pr(i & 1, (i >> 1) & 1, (i >> 2) & 1));
+    c.strokeStyle = small ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.12)';
+    c.lineWidth = 1;
+    for(let i = 0; i < 8; i++){
+      for(let bit = 0; bit < 3; bit++){
+        const j = i ^ (1 << bit);
+        if(j > i){ c.beginPath(); c.moveTo(corners[i].x, corners[i].y); c.lineTo(corners[j].x, corners[j].y); c.stroke(); }
+      }
+    }
+    if(!small){
+      const origin = pr(0, 0, 0);
+      c.font = '600 12px system-ui, sans-serif';
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      for(const [k, e] of [['x', pr(1, 0, 0)], ['y', pr(0, 1, 0)], ['z', pr(0, 0, 1)]]){
+        c.strokeStyle = 'rgba(236,232,219,0.55)';
+        c.lineWidth = 1.6;
+        c.beginPath(); c.moveTo(origin.x, origin.y); c.lineTo(e.x, e.y); c.stroke();
+        const dx = e.x - origin.x, dy = e.y - origin.y, len = Math.hypot(dx, dy) || 1;
+        c.fillStyle = '#ece8db';
+        c.fillText(state.axes[k] || '', e.x + dx / len * 12, e.y + dy / len * 12);
+      }
+    }
+
+    // data points, far to near
+    const pts = state.data.map(d => ({ d, q: pr(d[state.axes.x], d[state.axes.y], d[state.axes.z]) }));
+    pts.sort((p, q) => q.q.depth - p.q.depth);
+    for(const { d, q } of pts){
+      c.beginPath();
+      c.arc(q.x, q.y, small ? Math.max(1.3, 2.6 * q.s) : Math.max(2.5, 5.5 * q.s), 0, Math.PI * 2);
+      c.fillStyle = CLASS_COLORS[d.cls];
+      c.fill();
+      if(!small){ c.lineWidth = 1.4; c.strokeStyle = '#0b0b09'; c.stroke(); }
+    }
   }
   function redraw3d(){
     const rect = canvas3d.getBoundingClientRect();
@@ -2439,80 +2538,70 @@
       canvas3d.width = Math.round(W * dpr);
       canvas3d.height = Math.round(H * dpr);
     }
-    const c = ctx3d;
-    c.setTransform(dpr, 0, 0, dpr, 0, 0);
-    c.clearRect(0, 0, W, H);
-    const pr = (u, v, w) => project3d(u, v, w, W, H);
-
-    // cube wireframe
-    const corners = [];
-    for(let i = 0; i < 8; i++) corners.push(pr(i & 1, (i >> 1) & 1, (i >> 2) & 1));
-    c.strokeStyle = 'rgba(255,255,255,0.10)';
-    c.lineWidth = 1;
-    for(let i = 0; i < 8; i++){
-      for(let b = 0; b < 3; b++){
-        const j = i ^ (1 << b);
-        if(j > i){ c.beginPath(); c.moveTo(corners[i].x, corners[i].y); c.lineTo(corners[j].x, corners[j].y); c.stroke(); }
-      }
-    }
-    // axes from the origin corner, with labels
-    const o = pr(0, 0, 0);
-    const axisDefs = [['x', pr(1, 0, 0)], ['y', pr(0, 1, 0)], ['z', pr(0, 0, 1)]];
-    c.font = '600 12px system-ui, sans-serif';
-    c.textAlign = 'center'; c.textBaseline = 'middle';
-    for(const [k, e] of axisDefs){
-      c.strokeStyle = 'rgba(236,232,219,0.55)';
-      c.lineWidth = 1.6;
-      c.beginPath(); c.moveTo(o.x, o.y); c.lineTo(e.x, e.y); c.stroke();
-      const dx = e.x - o.x, dy = e.y - o.y, len = Math.hypot(dx, dy) || 1;
-      c.fillStyle = '#ece8db';
-      c.fillText(state.axes[k] || '', e.x + dx / len * 12, e.y + dy / len * 12);
-    }
-
-    // points, far to near
-    const pts = state.data.map(d => ({ d, q: pr(d[state.axes.x], d[state.axes.y], d[state.axes.z]) }));
-    pts.sort((a, b) => b.q.depth - a.q.depth);
-    for(const { d, q } of pts){
-      c.beginPath();
-      c.arc(q.x, q.y, Math.max(2.5, 6 * q.s), 0, Math.PI * 2);
-      c.fillStyle = CLASS_COLORS[d.cls];
-      c.fill();
-      c.lineWidth = 1.5;
-      c.strokeStyle = '#0b0b09';
-      c.stroke();
-    }
+    ctx3d.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawScene3d(ctx3d, state.trees.length ? (pt => ensemblePredict(pt, state.trees)) : null, W, H, { id: 'main', n: 15 });
   }
-  (function bind3dControls(){
+  // Redraws every existing overview canvas without rebuilding the grid (used while rotating).
+  function repaintOverview(){
+    const T = state.trees.length;
+    if(!T) return;
+    const bounds = computeDataBounds();
+    forestGrid.querySelectorAll('canvas').forEach(cv => {
+      const i = +cv.dataset.idx;
+      drawMiniBoundary(cv.getContext('2d'), (pt) => predictTree(state.trees[i], pt), 112, 112, 20, true, bounds, 'tree' + i);
+    });
+    const fcv = document.getElementById('finalCanvas');
+    if(fcv) drawMiniBoundary(fcv.getContext('2d'), (pt) => ensemblePredict(pt, state.trees), 240, 240, 48, false, bounds, 'final');
+    drawOvViewer(bounds);
+  }
+  let cam3dQueued = false;
+  function scheduleCam3d(){
+    if(cam3dQueued) return;
+    cam3dQueued = true;
+    requestAnimationFrame(() => {
+      cam3dQueued = false;
+      redraw3d();
+      if(!modelOverviewView.hidden) repaintOverview();
+    });
+  }
+  // Drag / wheel / keys orbit the shared camera from either the Data Canvas or the big overview viewer.
+  function attachOrbit(el){
     let drag = null;
-    canvas3d.addEventListener('pointerdown', (e) => {
-      try{ canvas3d.setPointerCapture(e.pointerId); }catch(err){}
+    const on3d = () => state.viewMode === '3d';
+    el.addEventListener('pointerdown', (e) => {
+      if(!on3d()) return;
+      try{ el.setPointerCapture(e.pointerId); }catch(err){}
       drag = { x: e.clientX, y: e.clientY };
     });
-    canvas3d.addEventListener('pointermove', (e) => {
-      if(!drag) return;
+    el.addEventListener('pointermove', (e) => {
+      if(!drag || !on3d()) return;
       state.cam.yaw += (e.clientX - drag.x) * 0.01;
       state.cam.pitch = Math.max(-1.5, Math.min(1.5, state.cam.pitch + (e.clientY - drag.y) * 0.01));
       drag = { x: e.clientX, y: e.clientY };
-      redraw3d();
+      scheduleCam3d();
     });
     const end = () => { drag = null; };
-    canvas3d.addEventListener('pointerup', end);
-    canvas3d.addEventListener('pointercancel', end);
-    canvas3d.addEventListener('wheel', (e) => {
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+    el.addEventListener('wheel', (e) => {
+      if(!on3d()) return;
       e.preventDefault();
       state.cam.zoom = Math.max(0.5, Math.min(3, state.cam.zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1)));
-      redraw3d();
+      scheduleCam3d();
     }, { passive: false });
-    canvas3d.addEventListener('dblclick', () => { Object.assign(state.cam, CAM_DEFAULT); redraw3d(); });
-    canvas3d.addEventListener('keydown', (e) => {
+    el.addEventListener('dblclick', () => { if(on3d()){ Object.assign(state.cam, CAM_DEFAULT); scheduleCam3d(); } });
+    el.addEventListener('keydown', (e) => {
+      if(!on3d()) return;
       const d = { ArrowLeft: [-0.1, 0], ArrowRight: [0.1, 0], ArrowUp: [0, -0.1], ArrowDown: [0, 0.1] }[e.key];
       if(!d) return;
       e.preventDefault();
       state.cam.yaw += d[0];
       state.cam.pitch = Math.max(-1.5, Math.min(1.5, state.cam.pitch + d[1]));
-      redraw3d();
+      scheduleCam3d();
     });
-  })();
+  }
+  attachOrbit(canvas3d);
+  attachOrbit(document.getElementById('clsOvCanvas'));
 
   function paintRange(input){
     const lo = +input.min, hi = +input.max;
